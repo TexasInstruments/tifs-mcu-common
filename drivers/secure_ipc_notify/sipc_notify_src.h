@@ -37,12 +37,12 @@
 extern "C" {
 #endif
 
-#include <drivers/sipc_notify.h>
-#include <drivers/secure_ipc_notify/soc/sipc_notify_soc.h>
+#include <security_common/drivers/secure_ipc_notify/sipc_notify.h>
+#include <security_common/drivers/secure_ipc_notify/soc/sipc_notify_soc.h>
 #include <kernel/dpl/HwiP.h>
 #include <kernel/dpl/ClockP.h>
 #include <kernel/dpl/CpuIdP.h>
-#include <drivers/secure_ipc_notify/sipc_notify_mailbox.h>
+#include <security_common/drivers/secure_ipc_notify/sipc_notify_mailbox.h>
 
 /**
  * @brief This structure describes the information related to one interrupt that is

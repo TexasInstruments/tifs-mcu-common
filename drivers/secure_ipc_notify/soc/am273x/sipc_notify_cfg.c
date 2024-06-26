@@ -30,8 +30,8 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <drivers/secure_ipc_notify/sipc_notify_src.h>
-#include <drivers/secure_ipc_notify/soc/am273x/sipc_notify_cfg.h>
+#include <security_common/drivers/secure_ipc_notify/sipc_notify_src.h>
+#include <security_common/drivers/secure_ipc_notify/soc/am273x/sipc_notify_cfg.h>
 #include <drivers/hw_include/am273x/cslr_soc.h>
 
 /* Dedicated hsm mailbox memories address and size */

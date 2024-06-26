@@ -30,7 +30,7 @@
  *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <drivers/secure_ipc_notify/sipc_notify_src.h>
+#include <security_common/drivers/secure_ipc_notify/sipc_notify_src.h>
 #include <kernel/dpl/CycleCounterP.h>
 
 /*

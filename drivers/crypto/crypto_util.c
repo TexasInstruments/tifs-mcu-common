@@ -43,7 +43,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#include <security/crypto/crypto_util.h>
+#include <security_common/drivers/crypto/crypto_util.h>
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */

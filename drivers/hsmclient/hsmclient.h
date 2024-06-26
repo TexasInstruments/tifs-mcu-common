@@ -39,9 +39,9 @@ extern "C" {
 
 /* Header file for HSM client driver */
 #include <stdint.h>
-#include <drivers/sipc_notify.h>
-#include <drivers/hsmclient/hsmclient_msg.h>
-#include <drivers/hsmclient/utils/hsmclient_utils.h>
+#include <security_common/drivers/secure_ipc_notify/sipc_notify.h>
+#include <security_common/drivers/hsmclient/hsmclient_msg.h>
+#include <security_common/drivers/hsmclient/utils/hsmclient_utils.h>
 #include <kernel/dpl/SemaphoreP.h>
 
 /**

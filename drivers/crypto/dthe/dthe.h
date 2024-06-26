@@ -54,7 +54,7 @@
 
 #include <stdint.h>
 #include <kernel/dpl/SystemP.h>
-#include <security/crypto/dthe/hw_include/cslr_dthe.h>
+#include <security_common/drivers/crypto/dthe/hw_include/cslr_dthe.h>
 #include <drivers/hw_include/cslr_soc.h>
 
 #ifdef __cplusplus

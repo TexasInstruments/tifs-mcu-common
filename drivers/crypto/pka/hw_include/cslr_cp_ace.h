@@ -41,7 +41,7 @@ extern "C"
 
 #include <drivers/hw_include/cslr.h>
 #include <stdint.h>
-#include <security/crypto/pka/hw_include/cslr_eip_29t2_ram.h>
+#include <security_common/drivers/crypto/pka/hw_include/cslr_eip_29t2_ram.h>
 
 /**************************************************************************
 * Module Base Offset Values

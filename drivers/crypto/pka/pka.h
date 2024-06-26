@@ -53,10 +53,10 @@
 /* ========================================================================== */
 
 #include <stdint.h>
-#include <security/crypto/pka/eip29t2_firmware.h>
-#include <security/crypto/pka/hw_include/cslr_cp_ace.h>
+#include <security_common/drivers/crypto/pka/eip29t2_firmware.h>
+#include <security_common/drivers/crypto/pka/hw_include/cslr_cp_ace.h>
 #include <kernel/dpl/SystemP.h>
-#include <security/crypto/crypto_util.h>
+#include <security_common/drivers/crypto/crypto_util.h>
 
 #ifdef __cplusplus
 extern "C" {

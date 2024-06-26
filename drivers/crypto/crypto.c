@@ -42,8 +42,8 @@
 
 #include <stdlib.h>
 #include <kernel/dpl/SystemP.h>
-#include <security/tifs_security/drivers/crypto/crypto.h>
-#include <security/tifs_security/drivers/crypto/sa2ul/sa2ul.h>
+#include <security_common/drivers/crypto/crypto.h>
+#include <security_common/drivers/crypto/sa2ul/sa2ul.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

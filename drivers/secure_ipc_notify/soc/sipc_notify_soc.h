@@ -40,13 +40,13 @@ extern "C"
 
 
 #if defined (SOC_AM263X)
-#include <drivers/secure_ipc_notify/soc/am263x/sipc_notify_cfg.h>
+#include <security_common/drivers/secure_ipc_notify/soc/am263x/sipc_notify_cfg.h>
 #elif defined (SOC_AM263PX)
-#include <drivers/secure_ipc_notify/soc/am263px/sipc_notify_cfg.h>
+#include <security_common/drivers/secure_ipc_notify/soc/am263px/sipc_notify_cfg.h>
 #elif defined (SOC_AM273X)
-#include <drivers/secure_ipc_notify/soc/am273x/sipc_notify_cfg.h>
+#include <security_common/drivers/secure_ipc_notify/soc/am273x/sipc_notify_cfg.h>
 #elif defined (SOC_AWR294X)
-#include <drivers/secure_ipc_notify/soc/awr294x/sipc_notify_cfg.h>
+#include <security_common/drivers/secure_ipc_notify/soc/awr294x/sipc_notify_cfg.h>
 #endif
 
 

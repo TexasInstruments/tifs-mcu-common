@@ -42,7 +42,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
-#include <security/crypto/dthe/dthe.h>
+#include <security_common/drivers/crypto/dthe/dthe.h>
 #include <drivers/hw_include/cslr.h>
 
 /* ========================================================================== */

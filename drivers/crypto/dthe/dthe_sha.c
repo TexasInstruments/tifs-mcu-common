@@ -41,7 +41,7 @@
 /* ========================================================================== */
 
 #include <string.h>
-#include <security/crypto/dthe/dthe_sha.h>
+#include <security_common/drivers/crypto/dthe/dthe_sha.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

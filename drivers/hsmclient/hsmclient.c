@@ -36,14 +36,14 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <inttypes.h>
-#include <drivers/sipc_notify.h>
+#include <security_common/drivers/secure_ipc_notify/sipc_notify.h>
 #include <kernel/dpl/SemaphoreP.h>
 #include <kernel/dpl/SystemP.h>
 #include <kernel/dpl/CacheP.h>
 #include <drivers/hw_include/cslr_soc.h>
 #include <kernel/dpl/HwiP.h>
-#include <drivers/hsmclient.h>
-#include <drivers/hsmclient/hsmclient_msg.h>
+#include <security_common/drivers/hsmclient/hsmclient.h>
+#include <security_common/drivers/hsmclient/hsmclient_msg.h>
 #include <drivers/soc.h>
 #include <string.h>
 #include <kernel/dpl/DebugP.h>

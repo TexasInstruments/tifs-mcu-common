@@ -39,7 +39,7 @@ extern "C" {
 
 #include <stdint.h>
 #include <kernel/dpl/SystemP.h>
-#include <drivers/secure_ipc_notify/soc/sipc_notify_soc.h>
+#include <security_common/drivers/secure_ipc_notify/soc/sipc_notify_soc.h>
 
 /**
  * \defgroup DRV_SIPC_NOTIFY_MODULE APIs for Secure IPC Notify

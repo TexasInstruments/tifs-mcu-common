@@ -52,10 +52,10 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 #include <stdint.h>
-#include <security/crypto/dthe/dthe.h>
+#include <security_common/drivers/crypto/dthe/dthe.h>
 #include <kernel/dpl/SystemP.h>
 #include <drivers/hw_include/cslr.h>
-#include <security/crypto/dthe/hw_include/cslr_aes.h>
+#include <security_common/drivers/crypto/dthe/hw_include/cslr_aes.h>
 
 #ifdef __cplusplus
 extern "C" {

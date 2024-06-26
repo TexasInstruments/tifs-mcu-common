@@ -34,7 +34,7 @@
 /*                             Include Files                                  */
 /* ========================================================================== */
 
-#include <drivers/hsmclient.h>
+#include <security_common/drivers/hsmclient/hsmclient.h>
 #include "hsmclient_utils.h"
 
 /* ========================================================================== */

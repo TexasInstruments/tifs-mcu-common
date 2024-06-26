@@ -38,7 +38,7 @@
 #include <kernel/dpl/SemaphoreP.h>
 #include <drivers/hw_include/cslr_soc.h>
 #include <kernel/dpl/HwiP.h>
-#include <drivers/hsmclient.h>
+#include <security_common/drivers/hsmclient/hsmclient.h>
 #include <string.h>
 #include <kernel/dpl/DebugP.h>
 

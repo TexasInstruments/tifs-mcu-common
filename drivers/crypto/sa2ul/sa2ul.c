@@ -45,7 +45,7 @@
 #include <drivers/hw_include/cslr.h>
 #include <kernel/dpl/DebugP.h>
 #include <kernel/dpl/CacheP.h>
-#include <security/crypto/sa2ul/sa2ul.h>
+#include <security_common/drivers/crypto/sa2ul/sa2ul.h>
 #include <drivers/hw_include/am64x_am243x/cslr_soc_baseaddress.h>
 #include <drivers/sciclient.h>
 #include <drivers/hw_include/am64x_am243x/cslr_main_ctrl_mmr.h>

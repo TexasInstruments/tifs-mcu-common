@@ -79,7 +79,7 @@
  */
 
 #include <stdint.h>
-#include <security/crypto/pka/eip29t2_firmware.h>
+#include <security_common/drivers/crypto/pka/eip29t2_firmware.h>
 /**
  * PKA firmware data
  */

@@ -41,7 +41,7 @@
 /* ========================================================================== */
 
 #include <string.h>
-#include <security/crypto/dthe/dthe_aes.h>
+#include <security_common/drivers/crypto/dthe/dthe_aes.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

@@ -43,7 +43,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <kernel/dpl/ClockP.h>
-#include <security/crypto/pka/pka.h>
+#include <security_common/drivers/crypto/pka/pka.h>
 #include <drivers/hw_include/cslr.h>
 #include <drivers/hw_include/cslr_soc.h>
 

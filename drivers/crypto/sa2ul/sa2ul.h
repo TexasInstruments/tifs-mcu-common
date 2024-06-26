@@ -54,7 +54,7 @@
 
 #include <string.h>
 #include <drivers/udma.h>
-#include <security/crypto/pka/hw_include/cslr_cp_ace.h>
+#include <security_common/drivers/crypto/pka/hw_include/cslr_cp_ace.h>
 
 #ifdef __cplusplus
 extern "C" {

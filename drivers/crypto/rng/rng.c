@@ -42,10 +42,10 @@
 
 #include <string.h>
 #include <stddef.h>
-#include <security/crypto/rng/rng.h>
+#include <security_common/drivers/crypto/rng/rng.h>
 #include <kernel/dpl/ClockP.h>
 #include <drivers/hw_include/cslr.h>
-#include <security/crypto/pka/hw_include/cslr_cp_ace.h>
+#include <security_common/drivers/crypto/pka/hw_include/cslr_cp_ace.h>
 #include <drivers/hw_include/cslr_soc.h>
 /* ========================================================================== */
 /*                          Global variables                                  */
