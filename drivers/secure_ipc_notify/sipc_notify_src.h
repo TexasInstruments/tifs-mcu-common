@@ -70,6 +70,7 @@ typedef struct SIPC_MailboxConfig_s
 {
     uint32_t writeDoneMailboxBaseAddr;   /**< Mailbox register address at which core will post interrupt */
     uint32_t readReqMailboxBaseAddr;   /**< Mailbox register address at which core will receive interrupt */
+    uint32_t readReqMailboxClrBaseAddr;   /**< Mailbox register address to clear interrupt */    
     uint8_t wrIntrBitPos;            /**< Bit pos in the mailbox register which should be set to post the interrupt to other core */
     uint8_t rdIntrBitPos;            /**< Bit pos in the mailbox register which should cleared clear an interrupt by the other core */
     SIPC_SwQueue *swQ;      /**< Infomration about the SW queue associated with this HW mailbox */
@@ -82,7 +83,7 @@ typedef struct SIPC_MailboxConfig_s
  * This is a pre-defined global since this config typically does not need to change based
  * on end user use-cases for this SOC.
  */
-extern SIPC_MailboxConfig gSIPC_R5MboxConfig[CORE_ID_MAX - 1] ;
+extern SIPC_MailboxConfig gSIPC_SecureHostMboxConfig[CORE_ID_MAX - 1] ;
 /**
  * @brief Global structure that is pre-defined for this SOC to configure any R5 CPU to HSM mailbox communication
  *
@@ -97,14 +98,14 @@ extern SIPC_MailboxConfig gSIPC_HsmMboxConfig[CORE_ID_MAX - 1] ;
  * This is a pre-defined global since this config typically does not need to change based
  * on end user use-cases for this SOC.
  */
-extern SIPC_SwQueue* gSIPC_QueR5ToHsm [MAX_SEC_CORES_WITH_HSM - 1];
+extern SIPC_SwQueue* gSIPC_QueSecureHostToHsm [MAX_SEC_CORES_WITH_HSM - 1];
 /**
  * @brief Global structure holding HSM -> R5 queues addresses indexed by sec core id
  *
  * This is a pre-defined global since this config typically does not need to change based
  * on end user use-cases for this SOC.
  */
-extern SIPC_SwQueue* gSIPC_QueHsmToR5[MAX_SEC_CORES_WITH_HSM - 1];
+extern SIPC_SwQueue* gSIPC_QueHsmToSecureHost[MAX_SEC_CORES_WITH_HSM - 1];
 
 #ifdef __cplusplus
 }

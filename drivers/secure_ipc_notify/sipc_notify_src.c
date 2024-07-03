@@ -31,7 +31,6 @@
  */
 
 #include <security_common/drivers/secure_ipc_notify/sipc_notify_src.h>
-#include <kernel/dpl/CycleCounterP.h>
 
 /*
  * global internal module state
@@ -72,7 +71,7 @@ static inline void SIPC_setMboxConfig(SIPC_Params *params, uint32_t selfCoreId)
             /* HSM TX queue setup                                                        */
             /*****************************************************************************/
             pMailboxConfig = &gSIPC_HsmMboxConfig[params->secHostCoreId[secMaster]];
-            pMailboxConfig->swQ = gSIPC_QueHsmToR5[secMaster];
+            pMailboxConfig->swQ = gSIPC_QueHsmToSecureHost[secMaster];
             pMailboxConfig->swQ->wrIdx = 0 ;
             pMailboxConfig->swQ->rdIdx = 0 ;
             pMailboxConfig->swQ->EleSize = params->ipcQueue_eleSize_inBytes;
@@ -82,8 +81,8 @@ static inline void SIPC_setMboxConfig(SIPC_Params *params, uint32_t selfCoreId)
             /*****************************************************************************/
             /* HSM RX queue setup                                                        */
             /*****************************************************************************/
-            pMailboxConfig = &gSIPC_R5MboxConfig[params->secHostCoreId[secMaster]];
-            pMailboxConfig->swQ = gSIPC_QueR5ToHsm[secMaster];
+            pMailboxConfig = &gSIPC_SecureHostMboxConfig[params->secHostCoreId[secMaster]];
+            pMailboxConfig->swQ = gSIPC_QueSecureHostToHsm[secMaster];
             pMailboxConfig->swQ->wrIdx = 0 ;
             pMailboxConfig->swQ->rdIdx = 0 ;
             pMailboxConfig->swQ->EleSize = params->ipcQueue_eleSize_inBytes;
@@ -97,8 +96,8 @@ static inline void SIPC_setMboxConfig(SIPC_Params *params, uint32_t selfCoreId)
         /*****************************************************************************/
         /* R5 TX queue setup                                                        */
         /*****************************************************************************/
-        pMailboxConfig = &gSIPC_R5MboxConfig[selfCoreId];
-        pMailboxConfig->swQ = gSIPC_QueR5ToHsm[gSIPC_ctrl.selfSecHostId];
+        pMailboxConfig = &gSIPC_SecureHostMboxConfig[selfCoreId];
+        pMailboxConfig->swQ = gSIPC_QueSecureHostToHsm[gSIPC_ctrl.selfSecHostId];
         pMailboxConfig->swQ->wrIdx = 0 ;
         pMailboxConfig->swQ->rdIdx = 0 ;
         pMailboxConfig->swQ->EleSize = params->ipcQueue_eleSize_inBytes;
@@ -109,7 +108,7 @@ static inline void SIPC_setMboxConfig(SIPC_Params *params, uint32_t selfCoreId)
         /* R5 RX queue setup                                                        */
         /*****************************************************************************/
         pMailboxConfig = &gSIPC_HsmMboxConfig[selfCoreId];
-        pMailboxConfig->swQ = gSIPC_QueHsmToR5[gSIPC_ctrl.selfSecHostId];
+        pMailboxConfig->swQ = gSIPC_QueHsmToSecureHost[gSIPC_ctrl.selfSecHostId];
         pMailboxConfig->swQ->wrIdx = 0 ;
         pMailboxConfig->swQ->rdIdx = 0 ;
         pMailboxConfig->swQ->EleSize = params->ipcQueue_eleSize_inBytes;
@@ -134,7 +133,7 @@ static inline void SIPC_getWriteMailbox(uint32_t remoteSecCoreId, uint32_t *mail
     else
     {
         /* Read from the mbox config of R5 -> hsm */
-        pMailboxConfig = &gSIPC_R5MboxConfig[gSIPC_ctrl.selfCoreId];
+        pMailboxConfig = &gSIPC_SecureHostMboxConfig[gSIPC_ctrl.selfCoreId];
         *mailboxBaseAddr = pMailboxConfig->writeDoneMailboxBaseAddr;
         *intrBitPos = pMailboxConfig->wrIntrBitPos;
         *swQ = pMailboxConfig->swQ;
@@ -155,8 +154,33 @@ static inline void SIPC_getReadMailbox(uint32_t *mailboxBaseAddr)
         }
         else
         {
-            pMailboxConfig = &gSIPC_R5MboxConfig[gSIPC_ctrl.selfCoreId];
+            pMailboxConfig = &gSIPC_SecureHostMboxConfig[gSIPC_ctrl.selfCoreId];
             *mailboxBaseAddr = pMailboxConfig->readReqMailboxBaseAddr;
+        }
+    }
+    else
+    {
+        *mailboxBaseAddr = NULL;
+    }
+}
+
+/* Get the read mailbox address */
+static inline void SIPC_getReadMailboxClear(uint32_t *mailboxBaseAddr)
+{
+    SIPC_MailboxConfig *pMailboxConfig;
+
+    if(gSIPC_ctrl.selfCoreId < CORE_ID_MAX)
+    {
+        /* If current core is HSM */
+        if(gSIPC_ctrl.selfCoreId == CORE_ID_HSM0_0 )
+        {
+            pMailboxConfig = &gSIPC_HsmMboxConfig[0];
+            *mailboxBaseAddr = pMailboxConfig->readReqMailboxClrBaseAddr;
+        }
+        else
+        {
+            pMailboxConfig = &gSIPC_SecureHostMboxConfig[gSIPC_ctrl.selfCoreId];
+            *mailboxBaseAddr = pMailboxConfig->readReqMailboxClrBaseAddr;
         }
     }
     else
@@ -186,7 +210,7 @@ static inline void SIPC_getReadSwQ(uint32_t remoteSecCoreId, SIPC_SwQueue **swQ)
         if(gSIPC_ctrl.selfCoreId == CORE_ID_HSM0_0)
         {
             /* Get remote secure master mailbox configuration */
-            pMailboxConfig = &gSIPC_R5MboxConfig[gSIPC_ctrl.secHostCoreId[remoteSecCoreId]];
+            pMailboxConfig = &gSIPC_SecureHostMboxConfig[gSIPC_ctrl.secHostCoreId[remoteSecCoreId]];
             *swQ = pMailboxConfig->swQ;
         }
         /* If current core is R5 */
@@ -228,6 +252,7 @@ void SIPC_isr(void *args)
     pendingIntr = SIPC_mailboxGetPendingIntr(mailboxBaseAddr);
     do
     {
+        SIPC_getReadMailboxClear(&mailboxBaseAddr);
         /* We clear pending interrupt unconditional here, and read all the SW queues later */
         SIPC_mailboxClearPendingIntr(mailboxBaseAddr, pendingIntr);
 
@@ -269,6 +294,7 @@ void SIPC_isr(void *args)
                 }
             } while(status == SystemP_SUCCESS);
         }
+        SIPC_getReadMailbox(&mailboxBaseAddr);
         /* We need to keeping doing this until all status bits are 0, else we dont get new interrupt */
         pendingIntr = SIPC_mailboxGetPendingIntr(mailboxBaseAddr);
     } while ( pendingIntr != 0 );
