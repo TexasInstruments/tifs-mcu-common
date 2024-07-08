@@ -57,14 +57,14 @@ uint8_t gCore_Ids[MAX_SEC_CORES_WITH_HSM] =
     CORE_ID_HSM0_0
 };
 /* Pointer to the Queues R5 -> HSM indexed by Sec master core Id */
-SIPC_SwQueue* gSIPC_QueR5ToHsm [MAX_SEC_CORES_WITH_HSM - 1] =
+SIPC_SwQueue* gSIPC_QueSecureHostToHsm [MAX_SEC_CORES_WITH_HSM - 1] =
 {
    CORE0_TO_HSM0_0_SW_QUEUE,
    CORE1_TO_HSM0_0_SW_QUEUE
 };
 
 /* Pointer to the Queues HSM -> R5 indexed by Sec master core Id */
-SIPC_SwQueue* gSIPC_QueHsmToR5[MAX_SEC_CORES_WITH_HSM - 1] =
+SIPC_SwQueue* gSIPC_QueHsmToSecureHost[MAX_SEC_CORES_WITH_HSM - 1] =
 {
    HSM0_0_TO_CORE0_SW_QUEUE,
    HSM0_0_TO_CORE1_SW_QUEUE
@@ -73,11 +73,12 @@ SIPC_SwQueue* gSIPC_QueHsmToR5[MAX_SEC_CORES_WITH_HSM - 1] =
 /* Mailbox queues will be dynamically created at runtime via sysconfig similarly as Rpmessage queues are made
  * Pre-defined mailbox config to send message from R5 to HSM
  * based on which core is configured as secure master the swQ data structure will be populated */
-SIPC_MailboxConfig gSIPC_R5MboxConfig[CORE_ID_MAX - 1] =
+SIPC_MailboxConfig gSIPC_SecureHostMboxConfig[CORE_ID_MAX - 1] =
 {
         { /* with HSM0_0 */
             .writeDoneMailboxBaseAddr = R5FSS0_0_MBOX_READ_DONE_ACK,
             .readReqMailboxBaseAddr = R5FSS0_0_MBOX_READ_DONE,
+            .readReqMailboxClrBaseAddr = R5FSS0_0_MBOX_READ_DONE,
             .wrIntrBitPos = HSM0_0_MBOX_WRITE_PROC_BIT_POS,
             .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
             .swQ = NULL,
@@ -86,6 +87,7 @@ SIPC_MailboxConfig gSIPC_R5MboxConfig[CORE_ID_MAX - 1] =
         { /* with HSM0_0 */
             .writeDoneMailboxBaseAddr = R5FSS0_1_MBOX_READ_DONE_ACK,
             .readReqMailboxBaseAddr = R5FSS0_1_MBOX_READ_DONE,
+            .readReqMailboxClrBaseAddr = R5FSS0_1_MBOX_READ_DONE,
             .wrIntrBitPos = HSM0_0_MBOX_WRITE_PROC_BIT_POS,
             .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
             .swQ = NULL,
@@ -93,6 +95,7 @@ SIPC_MailboxConfig gSIPC_R5MboxConfig[CORE_ID_MAX - 1] =
         { /* with HSM0_0 */
             .writeDoneMailboxBaseAddr = R5FSS1_0_MBOX_READ_DONE_ACK,
             .readReqMailboxBaseAddr = R5FSS1_0_MBOX_READ_DONE,
+            .readReqMailboxClrBaseAddr = R5FSS1_0_MBOX_READ_DONE,
             .wrIntrBitPos = HSM0_0_MBOX_WRITE_PROC_BIT_POS,
             .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
             .swQ = NULL,
@@ -100,6 +103,7 @@ SIPC_MailboxConfig gSIPC_R5MboxConfig[CORE_ID_MAX - 1] =
         { /* with HSM0_0 */
             .writeDoneMailboxBaseAddr = R5FSS1_1_MBOX_READ_DONE_ACK,
             .readReqMailboxBaseAddr = R5FSS1_1_MBOX_READ_DONE,
+            .readReqMailboxClrBaseAddr = R5FSS1_1_MBOX_READ_DONE,
             .wrIntrBitPos = HSM0_0_MBOX_WRITE_PROC_BIT_POS,
             .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
             .swQ = NULL,
@@ -113,6 +117,7 @@ SIPC_MailboxConfig gSIPC_HsmMboxConfig[CORE_ID_MAX - 1] =
     { /* MBOX config with R5FSS0-0 */
         .writeDoneMailboxBaseAddr = HSM0_0_MBOX_READ_DONE_ACK,
         .readReqMailboxBaseAddr = HSM0_0_MBOX_READ_DONE,
+        .readReqMailboxClrBaseAddr = HSM0_0_MBOX_READ_DONE,
         .wrIntrBitPos = R5FSS0_0_MBOX_WRITE_PROC_BIT_POS,
         .rdIntrBitPos = R5FSS0_0_MBOX_READ_PROC_BIT_POS,
         .swQ = NULL,
@@ -120,6 +125,7 @@ SIPC_MailboxConfig gSIPC_HsmMboxConfig[CORE_ID_MAX - 1] =
     { /* MBOX config with R5FSS0-1 */
         .writeDoneMailboxBaseAddr = HSM0_0_MBOX_READ_DONE_ACK,
         .readReqMailboxBaseAddr = HSM0_0_MBOX_READ_DONE,
+        .readReqMailboxClrBaseAddr = HSM0_0_MBOX_READ_DONE,
         .wrIntrBitPos = R5FSS0_1_MBOX_WRITE_PROC_BIT_POS,
         .rdIntrBitPos = R5FSS0_1_MBOX_READ_PROC_BIT_POS,
         .swQ = NULL,
@@ -128,6 +134,7 @@ SIPC_MailboxConfig gSIPC_HsmMboxConfig[CORE_ID_MAX - 1] =
     { /* MBOX config with R5FSS1-0 */
         .writeDoneMailboxBaseAddr = HSM0_0_MBOX_READ_DONE_ACK,
         .readReqMailboxBaseAddr = HSM0_0_MBOX_READ_DONE,
+        .readReqMailboxClrBaseAddr = HSM0_0_MBOX_READ_DONE,
         .wrIntrBitPos = R5FSS1_0_MBOX_WRITE_PROC_BIT_POS,
         .rdIntrBitPos = R5FSS1_0_MBOX_READ_PROC_BIT_POS,
         .swQ = NULL,
@@ -135,6 +142,7 @@ SIPC_MailboxConfig gSIPC_HsmMboxConfig[CORE_ID_MAX - 1] =
     { /* MBOX config with R5FSS1-1 */
         .writeDoneMailboxBaseAddr = HSM0_0_MBOX_READ_DONE_ACK,
         .readReqMailboxBaseAddr = HSM0_0_MBOX_READ_DONE,
+        .readReqMailboxClrBaseAddr = HSM0_0_MBOX_READ_DONE,
         .wrIntrBitPos = R5FSS1_1_MBOX_WRITE_PROC_BIT_POS,
         .rdIntrBitPos = R5FSS1_1_MBOX_READ_PROC_BIT_POS,
         .swQ = NULL,
