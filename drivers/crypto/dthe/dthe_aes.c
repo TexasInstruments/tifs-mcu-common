@@ -42,7 +42,7 @@
 
 #include <string.h>
 #include <security_common/drivers/crypto/dthe/dthe_aes.h>
-
+#include <security_common/drivers/crypto/dthe/dma.h>
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
@@ -84,6 +84,7 @@ static void DTHE_AES_controlMode(CSL_AesRegs *ptrAesRegs, uint32_t algoType);
 static void DTHE_AES_setOpType(CSL_AesRegs *ptrAesRegs, uint32_t opType);
 static void DTHE_AES_setDataLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t dataLenBytes);
 static void DTHE_AES_readTag(CSL_AesRegs *ptrAesRegs, uint32_t* ptrTag);
+static void DTHE_AES_clearAllInterrupts(CSL_AesRegs *ptrAesRegs);
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
@@ -247,6 +248,18 @@ static void DTHE_AES_setDataLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t dataLe
     CSL_REG32_FINS(&ptrAesRegs->C_LENGTH_0, AES_S_C_LENGTH_0_LENGTH, dataLenBytes);
 }
 
+/**
+ * \brief                   The function is clear interrupts
+ *
+ * \param   ptrAesRegs      Pointer to the EIP38T AES Registers.
+ *
+ * \param   status          Enable Interrupts
+ *
+ */
+static void DTHE_AES_clearAllInterrupts(CSL_AesRegs *ptrAesRegs)
+{
+    ptrAesRegs->IRQEN = 0x0;
+}
 
 DTHE_AES_Return_t DTHE_AES_open(DTHE_Handle handle)
 {
@@ -289,12 +302,13 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
     DTHE_Config       *config = NULL;
     DTHE_Attrs        *attrs  = NULL;
     CSL_AesRegs     *ptrAesRegs;
+    DMA_Handle      dmaHandle = NULL;
     uint32_t*       ptrWordInputBuffer;
     uint32_t*       ptrWordOutputBuffer;
     uint32_t        dataLenWords;
-    uint32_t        numBlocks;
+    uint16_t        numBlocks;
     uint32_t        partialDataSize;
-    uint32_t        index;
+    uint32_t        index = 0U;
     uint32_t        numBytes = 0U;
     uint8_t         inPartialBlock[32U];
     uint8_t         outPartialBlock[32U];
@@ -486,26 +500,77 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                 /* Compute the number of full blocks which can be written: Each block is 4words long*/
                 numBlocks = (dataLenWords / 4U);
 
-                /* Cycle through and write all the full blocks: */
-                for (index = 0U; index < numBlocks; index++)
+                if ( (config->dmaEnable == DMA_ENABLE) && (numBlocks > 0U) )
                 {
-                    /* Wait for the AES IP to be ready to receive the data: */
-                    DTHE_AES_pollInputReady(ptrAesRegs);
 
-                    /* Write the data: */
-                    DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[index << 2U]);
+                    dmaHandle = DMA_open(0);
+
+
+                    DMA_Config_TxChannel(dmaHandle, ptrWordInputBuffer, (uint32_t *)&ptrAesRegs->DATA_IN_3, numBlocks, 0U, DMA_AES_ENABLE);
 
                     if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
                     {
-                        /* Wait for the AES IP to be ready with the output data */
-                        DTHE_AES_pollOutputReady(ptrAesRegs);
+                        DMA_Config_RxChannel(dmaHandle, (uint32_t *)&ptrAesRegs->DATA_IN_3, ptrWordOutputBuffer, numBlocks);
+                    }
 
-                        /* Read the decrypted data into the decrypted block: */
-                        DTHE_AES_readDataBlock(ptrAesRegs, &ptrWordOutputBuffer[index << 2U]);
+                    DTHE_AES_clearAllInterrupts(ptrAesRegs);
+
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    {
+                        DTHE_AES_setDMAOutputRequestStatus(ptrAesRegs, 1);
+                        DMA_enableRxTransferRegion(dmaHandle);
+                    }
+
+                    DMA_enableTxTransferRegion(dmaHandle);
+                    DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 1);
+
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    {
+                        DMA_WaitForRxTransfer(dmaHandle);
+                    }
+
+                    DMA_WaitForTxTransfer(dmaHandle);
+
+                    DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 0);
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    {
+                        DTHE_AES_setDMAOutputRequestStatus(ptrAesRegs, 0);
+                    }
+
+                    DMA_disableTxCh(dmaHandle);
+
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    {
+                        DMA_disableRxCh(dmaHandle);
                     }
 
                     /* Compute the number of bytes which have been processed: */
-                    numBytes = numBytes + (4U * sizeof(uint32_t));
+                    numBytes = numBytes + (numBlocks * 4 * sizeof(uint32_t));
+                    index = numBlocks;
+                }
+                else
+                {
+                    /* Cycle through and write all the full blocks: */
+                    for (index = 0U; index < numBlocks; index++)
+                    {
+                        /* Wait for the AES IP to be ready to receive the data: */
+                        DTHE_AES_pollInputReady(ptrAesRegs);
+
+                        /* Write the data: */
+                        DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[index << 2U]);
+
+                        if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                        {
+                            /* Wait for the AES IP to be ready with the output data */
+                            DTHE_AES_pollOutputReady(ptrAesRegs);
+
+                            /* Read the decrypted data into the decrypted block: */
+                            DTHE_AES_readDataBlock(ptrAesRegs, &ptrWordOutputBuffer[index << 2U]);
+                        }
+
+                        /* Compute the number of bytes which have been processed: */
+                        numBytes = numBytes + (4U * sizeof(uint32_t));
+                    }
                 }
 
                 /* - This flow is for one-shot in continuation to the above flow

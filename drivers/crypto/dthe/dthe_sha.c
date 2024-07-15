@@ -42,6 +42,7 @@
 
 #include <string.h>
 #include <security_common/drivers/crypto/dthe/dthe_sha.h>
+#include <security_common/drivers/crypto/dthe/dma.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
@@ -81,6 +82,7 @@ uint32_t                gDTHESHAdigestCount;
 /*                 Internal Function Declarations                             */
 /* ========================================================================== */
 static void DTHE_SHA_setInterruptStatus(CSL_EIP57T_SHARegs* ptrSHARegs, uint8_t intStatus);
+static void DTHE_SHA_setDMA(CSL_EIP57T_SHARegs* ptrSHARegs, uint8_t dmaStatus);
 static void DTHE_SHA_pollContextReady(CSL_EIP57T_SHARegs* ptrSHARegs);
 static uint8_t DTHE_SHA_isContextReadyIRQ(const CSL_EIP57T_SHARegs* ptrSHARegs);
 static void DTHE_SHA_setUseAlgoConstants(CSL_EIP57T_SHARegs* ptrSHARegs, uint8_t useAlgConstants);
@@ -175,11 +177,12 @@ DTHE_SHA_Return_t DTHE_SHA_close(DTHE_Handle handle)
 DTHE_SHA_Return_t DTHE_SHA_compute(DTHE_Handle handle, DTHE_SHA_Params* ptrShaParams, int32_t isLastBlock)
 {
     DTHE_SHA_Return_t       status = DTHE_SHA_RETURN_SUCCESS;
+    DMA_Handle              dmaHandle = NULL;
     uint32_t                index = 0U;
     uint32_t                dataLenWords;
     uint32_t                dataLenBytes;
     uint8_t                 *ptrByteDataBuffer;
-    uint32_t                numBlocks;
+    uint16_t                numBlocks;
     uint8_t                 useAlgoConstants;
     uint8_t                 closeHash;
     uint8_t                 blockSize;
@@ -313,19 +316,43 @@ DTHE_SHA_Return_t DTHE_SHA_compute(DTHE_Handle handle, DTHE_SHA_Params* ptrShaPa
         /* Compute the number of partial words which need to be handled seperately */
         numPartialWords = dataLenWords % blockSize;
 
-        /* Compute the number of full blocks which need to be processed: */
-        for (index = 0U; index < numBlocks; index = index + 1U)
+        if ((config->dmaEnable == DMA_ENABLE) && numBlocks > 0U)
         {
-            /* Ensure that the SHA IP Block is ready to receive data: */
-            DTHE_SHA_pollInputReady(ptrShaRegs);
+            dmaHandle = DMA_open(0);
 
-            /* Write the data block: */
-            DTHE_SHA_writeDataBlock(ptrShaRegs,
-                                    &ptrShaParams->ptrDataBuffer[index << shiftSize],
-                                    blockSize);
+            DMA_Config_TxChannel(dmaHandle, ptrShaParams->ptrDataBuffer, (uint32_t *)&ptrShaRegs->DATA_IN[0], numBlocks, blockSize, DMA_SHA_ENABLE);
+
+            /* Compute the number of full blocks which need to be processed: */
+            DMA_enableTxTransferRegion(dmaHandle);
+
+            DTHE_SHA_setDMA(ptrShaRegs, 1);
+
+            DMA_WaitForTxTransfer(dmaHandle);
+            
+            DTHE_SHA_setDMA(ptrShaRegs, 0);
+
+            DMA_disableTxCh(dmaHandle);
 
             /* Compute the number of bytes which have been processed: */
-            numBytes = numBytes + (blockSize * sizeof(uint32_t));
+            numBytes = numBytes + (numBlocks * blockSize * sizeof(uint32_t));
+            index = numBlocks;
+        }
+        else
+        {
+            /* Compute the number of full blocks which need to be processed: */
+            for (index = 0U; index < numBlocks; index = index + 1U)
+            {
+                /* Ensure that the SHA IP Block is ready to receive data: */
+                DTHE_SHA_pollInputReady(ptrShaRegs);
+
+                /* Write the data block: */
+                DTHE_SHA_writeDataBlock(ptrShaRegs,
+                                        &ptrShaParams->ptrDataBuffer[index << shiftSize],
+                                        blockSize);
+
+                /* Compute the number of bytes which have been processed: */
+                numBytes = numBytes + (blockSize * sizeof(uint32_t));
+            }
         }
 
         /* Process any left over data: */
@@ -391,11 +418,12 @@ DTHE_SHA_Return_t DTHE_SHA_compute(DTHE_Handle handle, DTHE_SHA_Params* ptrShaPa
 DTHE_SHA_Return_t DTHE_HMACSHA_compute(DTHE_Handle handle, DTHE_SHA_Params* ptrShaParams)
 {
     DTHE_SHA_Return_t       status = DTHE_SHA_RETURN_FAILURE;
+    DMA_Handle              dmaHandle = NULL;
     uint32_t                index;
     uint32_t                dataLenWords;
     uint32_t                dataLenBytes;
     uint8_t                 *ptrByteDataBuffer;
-    uint32_t                numBlocks;
+    uint16_t                numBlocks;
     uint8_t                 blockSize;
     uint32_t                shiftSize;
     uint32_t                numPartialWords;
@@ -490,19 +518,43 @@ DTHE_SHA_Return_t DTHE_HMACSHA_compute(DTHE_Handle handle, DTHE_SHA_Params* ptrS
             /* Compute the number of partial words which need to be handled seperately */
             numPartialWords = dataLenWords % blockSize;
 
-            /* Compute the number of full blocks which need to be processed: */
-            for (index = 0U; index < numBlocks; index = index + 1U)
+            if ((config->dmaEnable == DMA_ENABLE) && numBlocks > 0U)
             {
-                /* Ensure that the SHA IP Block is ready to receive data: */
-                DTHE_SHA_pollInputReady(ptrShaRegs);
+                dmaHandle = DMA_open(0);
 
-                /* Write the data block: */
-                DTHE_SHA_writeDataBlock(ptrShaRegs,
-                                        &ptrShaParams->ptrDataBuffer[index << shiftSize],
-                                        blockSize);
+                DMA_Config_TxChannel(dmaHandle, ptrShaParams->ptrDataBuffer, (uint32_t *)&ptrShaRegs->DATA_IN[0], numBlocks, blockSize, DMA_SHA_ENABLE);
+
+                /* Compute the number of full blocks which need to be processed: */
+                DMA_enableTxTransferRegion(dmaHandle);
+
+                DTHE_SHA_setDMA(ptrShaRegs, 1);
+
+                DMA_WaitForTxTransfer(dmaHandle);
+
+                DTHE_SHA_setDMA(ptrShaRegs, 0);
+
+                DMA_disableTxCh(dmaHandle);
 
                 /* Compute the number of bytes which have been processed: */
-                numBytes = numBytes + (blockSize * sizeof(uint32_t));
+                numBytes = numBytes + (numBlocks * blockSize * sizeof(uint32_t));
+                index = numBlocks;
+            }
+            else
+            {
+                /* Compute the number of full blocks which need to be processed: */
+                for (index = 0U; index < numBlocks; index = index + 1U)
+                {
+                    /* Ensure that the SHA IP Block is ready to receive data: */
+                    DTHE_SHA_pollInputReady(ptrShaRegs);
+
+                    /* Write the data block: */
+                    DTHE_SHA_writeDataBlock(ptrShaRegs,
+                                            &ptrShaParams->ptrDataBuffer[index << shiftSize],
+                                            blockSize);
+
+                    /* Compute the number of bytes which have been processed: */
+                    numBytes = numBytes + (blockSize * sizeof(uint32_t));
+                }
             }
 
             /* Process any left over data: */
@@ -572,6 +624,21 @@ static void DTHE_SHA_setInterruptStatus(CSL_EIP57T_SHARegs* ptrSHARegs, uint8_t 
 {
     CSL_FINSR(ptrSHARegs->SYSCONFIG, 2U, 2U, intStatus);
     return;
+}
+
+
+/**
+ *  \brief  The function is used to enable/disable the DMA
+ *
+ *  \param  ptrSHARegs      Pointer to the EIP57T SHA Registers
+ *
+ *  \param  dmaStatus       Flag which is used to enable(1)/disable(0) the DMA operation
+ *
+ */
+static void DTHE_SHA_setDMA(CSL_EIP57T_SHARegs* ptrSHARegs, uint8_t dmaStatus)
+{
+    /* SDMA_en */
+    CSL_FINSR (ptrSHARegs->SYSCONFIG, 3U, 3U, dmaStatus);
 }
 
 /**

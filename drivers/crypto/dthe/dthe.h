@@ -56,6 +56,7 @@
 #include <kernel/dpl/SystemP.h>
 #include <security_common/drivers/crypto/dthe/hw_include/cslr_dthe.h>
 #include <drivers/hw_include/cslr_soc.h>
+#include <security_common/drivers/crypto/dthe/dma/device_includes.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,6 +107,9 @@ typedef struct
 {
     DTHE_Attrs             *attrs;
     /**< Driver params passed during open */
+
+    uint32_t                dmaEnable;
+    /**< To enable dthe with dma */
 } DTHE_Config;
 
 /* ========================================================================== */
