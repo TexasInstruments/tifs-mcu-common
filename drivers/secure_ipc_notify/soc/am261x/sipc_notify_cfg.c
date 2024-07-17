@@ -90,20 +90,6 @@ SIPC_MailboxConfig gSIPC_R5MboxConfig[CORE_ID_MAX - 1] =
             .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
             .swQ = NULL,
         },
-        { /* with HSM0_0 */
-            .writeDoneMailboxBaseAddr = R5FSS1_0_MBOX_READ_DONE_ACK,
-            .readReqMailboxBaseAddr = R5FSS1_0_MBOX_READ_DONE,
-            .wrIntrBitPos = HSM0_0_MBOX_WRITE_PROC_BIT_POS,
-            .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
-            .swQ = NULL,
-        },
-        { /* with HSM0_0 */
-            .writeDoneMailboxBaseAddr = R5FSS1_1_MBOX_READ_DONE_ACK,
-            .readReqMailboxBaseAddr = R5FSS1_1_MBOX_READ_DONE,
-            .wrIntrBitPos = HSM0_0_MBOX_WRITE_PROC_BIT_POS,
-            .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
-            .swQ = NULL,
-        },
 };
 
 /* Pre-defined mailbox config to send message from R5 to HSM
@@ -122,21 +108,6 @@ SIPC_MailboxConfig gSIPC_HsmMboxConfig[CORE_ID_MAX - 1] =
         .readReqMailboxBaseAddr = HSM0_0_MBOX_READ_DONE,
         .wrIntrBitPos = R5FSS0_1_MBOX_WRITE_PROC_BIT_POS,
         .rdIntrBitPos = R5FSS0_1_MBOX_READ_PROC_BIT_POS,
-        .swQ = NULL,
-
-    },
-    { /* MBOX config with R5FSS1-0 */
-        .writeDoneMailboxBaseAddr = HSM0_0_MBOX_READ_DONE_ACK,
-        .readReqMailboxBaseAddr = HSM0_0_MBOX_READ_DONE,
-        .wrIntrBitPos = R5FSS1_0_MBOX_WRITE_PROC_BIT_POS,
-        .rdIntrBitPos = R5FSS1_0_MBOX_READ_PROC_BIT_POS,
-        .swQ = NULL,
-    },
-    { /* MBOX config with R5FSS1-1 */
-        .writeDoneMailboxBaseAddr = HSM0_0_MBOX_READ_DONE_ACK,
-        .readReqMailboxBaseAddr = HSM0_0_MBOX_READ_DONE,
-        .wrIntrBitPos = R5FSS1_1_MBOX_WRITE_PROC_BIT_POS,
-        .rdIntrBitPos = R5FSS1_1_MBOX_READ_PROC_BIT_POS,
         .swQ = NULL,
 
     },
@@ -160,26 +131,6 @@ SIPC_InterruptConfig gSIPC_InterruptConfig[INTR_CFG_NUM_MAX][CORE_ID_MAX] =
         /* Interrupt config for R5FSS0_1 Core */
         {
             .intNum = R5FSS0_1_MBOX_READ_ACK_INTR,   /* interrupt line on R5FSS0-1 */
-            .eventId = 0U,   /* not used */
-            .numCores = 1U,  /* number of cores that send messages which tied to this interrupt line */
-            .coreIdList = { /* sec core ID's tied to this interrupt line */
-                CORE_INDEX_HSM,
-            },
-            .clearIntOnInit = 1,
-        },
-        /* Interrupt config for R5FSS1_0 Core */
-        {
-            .intNum = R5FSS1_0_MBOX_READ_ACK_INTR,   /* interrupt line on R5FSS0-1 */
-            .eventId = 0U,   /* not used */
-            .numCores = 1U,  /* number of cores that send messages which tied to this interrupt line */
-            .coreIdList = { /* sec core ID's tied to this interrupt line */
-                CORE_INDEX_HSM,
-            },
-            .clearIntOnInit = 1,
-        },
-        /* Interrupt config for R5FSS1_1 Core */
-        {
-            .intNum = R5FSS1_1_MBOX_READ_ACK_INTR,   /* interrupt line on R5FSS0-1 */
             .eventId = 0U,   /* not used */
             .numCores = 1U,  /* number of cores that send messages which tied to this interrupt line */
             .coreIdList = { /* sec core ID's tied to this interrupt line */

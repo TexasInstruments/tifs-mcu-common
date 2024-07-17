@@ -66,10 +66,6 @@ extern "C"
 #define R5FSS0_0_MBOX_READ_DONE        (CSL_MSS_CTRL_U_BASE + CSL_MSS_CTRL_R5SS0_CORE0_MBOX_READ_DONE)
 #define R5FSS0_1_MBOX_READ_DONE_ACK    (CSL_MSS_CTRL_U_BASE + CSL_MSS_CTRL_R5SS0_CORE1_MBOX_READ_DONE_ACK)
 #define R5FSS0_1_MBOX_READ_DONE        (CSL_MSS_CTRL_U_BASE + CSL_MSS_CTRL_R5SS0_CORE1_MBOX_READ_DONE)
-#define R5FSS1_0_MBOX_READ_DONE_ACK    (CSL_MSS_CTRL_U_BASE + CSL_MSS_CTRL_R5SS1_CORE0_MBOX_READ_DONE_ACK)
-#define R5FSS1_0_MBOX_READ_DONE        (CSL_MSS_CTRL_U_BASE + CSL_MSS_CTRL_R5SS1_CORE0_MBOX_READ_DONE)
-#define R5FSS1_1_MBOX_READ_DONE_ACK    (CSL_MSS_CTRL_U_BASE + CSL_MSS_CTRL_R5SS1_CORE1_MBOX_READ_DONE_ACK)
-#define R5FSS1_1_MBOX_READ_DONE        (CSL_MSS_CTRL_U_BASE + CSL_MSS_CTRL_R5SS1_CORE1_MBOX_READ_DONE)
 
 /* HSM registers for sending and receiving IPC interrupts */
 #define HSM0_0_MBOX_READ_DONE_ACK         (HSM_SOC_CTRL_U_BASE + HSM_SOC_CTRL_HSM_MBOX_READ_DONE_ACK)
@@ -79,8 +75,6 @@ extern "C"
  * HSM will write the READ_DONE_ACK register to raise an interrupt to R5 core */
 #define R5FSS0_0_MBOX_WRITE_PROC_BIT_POS  ( 0U)
 #define R5FSS0_1_MBOX_WRITE_PROC_BIT_POS  ( 4U)
-#define R5FSS1_0_MBOX_WRITE_PROC_BIT_POS  ( 8U)
-#define R5FSS1_1_MBOX_WRITE_PROC_BIT_POS  ( 12U)
 
 /* Bitshift to raise an interrupt from R5 core to HSM */
 #define HSM0_0_MBOX_WRITE_PROC_BIT_POS    ( 6U)
@@ -88,15 +82,11 @@ extern "C"
 /* CPU bit positions within the mailbox registers for receiving interrupts */
 #define R5FSS0_0_MBOX_READ_PROC_BIT_POS  ( 0U)
 #define R5FSS0_1_MBOX_READ_PROC_BIT_POS  ( 4U)
-#define R5FSS1_0_MBOX_READ_PROC_BIT_POS  ( 8U)
-#define R5FSS1_1_MBOX_READ_PROC_BIT_POS  (12U)
 #define HSM0_0_MBOX_READ_PROC_BIT_POS    (24U)
 
 /* Mailbox interrupts numbers */
 #define R5FSS0_0_MBOX_READ_ACK_INTR      ( 137U)
 #define R5FSS0_1_MBOX_READ_ACK_INTR      ( 137U)
-#define R5FSS1_0_MBOX_READ_ACK_INTR      ( 137U)
-#define R5FSS1_1_MBOX_READ_ACK_INTR      ( 137U)
 #define HSM0_0_MBOX_READ_ACK_INTR        ( 56U )
 
 /**
@@ -108,8 +98,6 @@ typedef enum SIPC_CoreId_
 {
     CORE_ID_R5FSS0_0 = 0,
     CORE_ID_R5FSS0_1,
-    CORE_ID_R5FSS1_0,
-    CORE_ID_R5FSS1_1,
     CORE_ID_HSM0_0  ,
     CORE_ID_MAX
 } SIPC_coreId;
