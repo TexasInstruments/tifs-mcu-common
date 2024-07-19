@@ -82,7 +82,7 @@ static inline int32_t SIPC_mailboxRead(SIPC_SwQueue *swQ, uint8_t *Buff)
         if( rdIdx != wrIdx)
         {
             /* Copy EleSize bytes from Queue memory to the buffer */
-            memcpy(Buff, (swQ->Qfifo + (swQ->EleSize*rdIdx)),swQ->EleSize);
+            memcpy(Buff, SOC_phyToVirt((uint64_t)(swQ->Qfifo + (swQ->EleSize*rdIdx))),swQ->EleSize);
 
             rdIdx = (rdIdx+1)%swQ->Qlength;
 
@@ -118,7 +118,7 @@ static inline int32_t SIPC_mailboxWrite(uint32_t mailboxBaseAddr, uint32_t wrInt
 
             /* There is some space in the FIFO */
 
-            memcpy((swQ->Qfifo + (swQ->EleSize*wrIdx)),Buff,swQ->EleSize);
+            memcpy(SOC_phyToVirt((uint64_t)(swQ->Qfifo + (swQ->EleSize*wrIdx))),Buff,swQ->EleSize);
 
             wrIdx = (wrIdx+1)%swQ->Qlength;
 

@@ -91,8 +91,8 @@ typedef struct SIPC_Params_ {
                                            *
                                            *   See \ref CSL_CoreID for valid values for this field. */
 
-    uint32_t ipcQueue_length ; /** < Number of elements in IpcQueue */
-    uint32_t ipcQueue_eleSize_inBytes ; /** < size of each element in words */
+    uint16_t ipcQueue_length ; /** < Number of elements in IpcQueue */
+    uint16_t ipcQueue_eleSize_inBytes ; /** < size of each element in words */
     uint32_t ipcQueue_totalSize_inBytes ; /** < Total size of IpcQueue */
 
     uintptr_t tx_SipcQueues[MAX_SEC_CORES_WITH_HSM]; /**< List of pointer to the queue locaton which is indexed

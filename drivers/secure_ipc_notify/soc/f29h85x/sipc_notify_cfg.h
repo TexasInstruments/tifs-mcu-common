@@ -38,6 +38,7 @@ extern "C"
 #endif
 
 #include <drivers/hw_include/f29h85x/cslr_soc.h>
+#include <drivers/soc/f29h85x/soc.h>
 #include <kernel/dpl/CpuIdP.h>
 
 /**

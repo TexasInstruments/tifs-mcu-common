@@ -38,6 +38,7 @@ extern "C"
 #endif
 
 #include <drivers/hw_include/am261x/cslr_soc.h>
+#include <drivers/soc/am261x/soc.h>
 #include <kernel/dpl/CpuIdP.h>
 
 /**

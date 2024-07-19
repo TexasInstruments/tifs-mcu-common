@@ -35,7 +35,13 @@
 #include <drivers/hw_include/f29h85x/cslr_soc.h>
 
 /* Dedicated hsm mailbox memories address and size */
+
+#if defined(__C29__)
+#define HSM_MBOX_MEM                (0x302C0000)
+#else
 #define HSM_MBOX_MEM                (0x4E040000)
+#endif
+
 #define HSM_MBOX_MEM_SIZE           ((2U*1024U))
 
 /* SIPC_SwQueue structure should be stored in a particular shared memory section
@@ -43,10 +49,10 @@
  * Both R5 and M4 cores can access this data structure .
  * Each of the SwQueue instance will point to a corresponding Queue memory location in HSM_MBOX_MEM area
  */
-#define HSM0_0_TO_CORE0_SW_QUEUE            (SIPC_SwQueue*)(HSM_MBOX_MEM + ((3*HSM_MBOX_MEM_SIZE) - 1) - (2*MAILBOX_MAX_SW_QUEUE_STRUCT_SIZE))
-#define CORE0_TO_HSM0_0_SW_QUEUE            (SIPC_SwQueue*)(HSM_MBOX_MEM + ((2*HSM_MBOX_MEM_SIZE) - 1) - (2*MAILBOX_MAX_SW_QUEUE_STRUCT_SIZE))
-#define HSM0_0_TO_CORE1_SW_QUEUE            (SIPC_SwQueue*)(HSM_MBOX_MEM + ((3*HSM_MBOX_MEM_SIZE) - 1) - (1*MAILBOX_MAX_SW_QUEUE_STRUCT_SIZE))
-#define CORE1_TO_HSM0_0_SW_QUEUE            (SIPC_SwQueue*)(HSM_MBOX_MEM + ((2*HSM_MBOX_MEM_SIZE) - 1) - (1*MAILBOX_MAX_SW_QUEUE_STRUCT_SIZE))
+#define HSM0_0_TO_CORE0_SW_QUEUE            (SIPC_SwQueue*)(HSM_MBOX_MEM + ((3*HSM_MBOX_MEM_SIZE) - 12) - (2*MAILBOX_MAX_SW_QUEUE_STRUCT_SIZE))
+#define CORE0_TO_HSM0_0_SW_QUEUE            (SIPC_SwQueue*)(HSM_MBOX_MEM + ((2*HSM_MBOX_MEM_SIZE) - 12) - (2*MAILBOX_MAX_SW_QUEUE_STRUCT_SIZE))
+#define HSM0_0_TO_CORE1_SW_QUEUE            (SIPC_SwQueue*)(HSM_MBOX_MEM + ((3*HSM_MBOX_MEM_SIZE) - 12) - (1*MAILBOX_MAX_SW_QUEUE_STRUCT_SIZE))
+#define CORE1_TO_HSM0_0_SW_QUEUE            (SIPC_SwQueue*)(HSM_MBOX_MEM + ((2*HSM_MBOX_MEM_SIZE) - 12) - (1*MAILBOX_MAX_SW_QUEUE_STRUCT_SIZE))
 
 /* For AM263Px SBL runs on R50 core so one of the secure master has to be R50 by default
  * Default second secure master is R51 */
