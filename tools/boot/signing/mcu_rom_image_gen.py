@@ -182,6 +182,7 @@ def get_sha_val(f_name, sha_type):
 
 
 def get_cert(args):
+    device = args.device
     swrev = args.swrv
     ext_enc_keylock = ""
 
@@ -194,7 +195,10 @@ def get_cert(args):
             bootCore_id = 16
             certType = 1
             bootCoreOptions = 0
-            enc_keylock_ext = "1.3.6.1.4.1.294.1.11=ASN1:SEQUENCE:enc_keylock"
+            if(device == 'am263x'):
+                enc_keylock_ext = ""
+            else:
+                enc_keylock_ext = "1.3.6.1.4.1.294.1.11=ASN1:SEQUENCE:enc_keylock"
             enc_key_lock = g_enc_unlock_types['UNLOCK']
         else:
             bootAddress = 0
@@ -271,7 +275,7 @@ def get_cert(args):
         )
     ret_cert = ""
 
-    if(args.core == 'R5'):
+    if(args.core == 'R5' and device != 'am263x'):
         ext_enc_keylock = g_ext_enc_keylock.format(
             CUST_MEK_KEY_LOCK=enc_key_lock,
         )
@@ -323,7 +327,7 @@ def get_cert(args):
     elif args.tifs_enc:
         ret_cert += tifs_enc_seq
 
-    if(args.core == 'R5'):
+    if(args.core == 'R5' and device != 'am263x'):
         ret_cert += ext_enc_keylock
 
     if(args.kd_salt and args.sbl_enc):
@@ -430,6 +434,8 @@ my_parser.add_argument('--out-image',   type=str,
                        required=True, help='Output file of SBL/hsmRT images')
 my_parser.add_argument('--debug',       type=str,
                        help='Debug options for the image')
+my_parser.add_argument('--device',       type=str,
+                       help='SOC name', default='am263px')
 
 args = my_parser.parse_args()
 
