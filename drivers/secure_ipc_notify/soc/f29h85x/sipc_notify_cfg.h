@@ -41,6 +41,14 @@ extern "C"
 #include <drivers/soc/f29h85x/soc.h>
 #include <kernel/dpl/CpuIdP.h>
 
+/* Dedicated hsm mailbox memories address */
+
+#if defined(__C29__)
+#define HSM_MBOX_MEM                (0x302C0000)
+#else
+#define HSM_MBOX_MEM                (0x4E040000)
+#endif
+
 /**
  * @brief
  * SIPC message size in bytes each element of queue will be of this size. */
@@ -107,7 +115,6 @@ extern "C"
 typedef enum SIPC_CoreId_
 {
     CORE_ID_C29_CPU_1 = 0,
-    CORE_ID_C29_CPU_2,
     CORE_ID_C29_CPU_3,
     CORE_ID_HSM0_0  ,
     CORE_ID_MAX
@@ -127,17 +134,23 @@ typedef enum SIPC_SecCoreId_
     MAX_SEC_CORES_WITH_HSM
 }SIPC_SecCoreId;
 
-#if defined(__ARM_ARCH_7R__)
+#if defined(__C29__)
 
 /* If building for R5 then read selfcore ID from the Core Cluster register */
-static uint32_t SIPC_readSelfCoreID(void)
+static uint8_t SIPC_readSelfCoreID(void)
 {
-    uint32_t coreId ;
-    CSL_ArmR5CPUInfo cpuId = {0, 0};
-    CSL_armR5GetCpuID(&cpuId);
+    uint8_t coreId;
+    coreId = CpuIdP_c29GetCpuID();
+    
     /* both cpuId and greId fields can be either 0 or 1
      * ex for R5FSS1-0 core grpId = 1 and cpu id = 0 */
-    coreId = cpuId.cpuID | (cpuId.grpId) << 1 ;
+    if(1 == coreId){
+        coreId = CORE_ID_C29_CPU_1;
+    }
+    else if(3 == coreId){
+        coreId = CORE_ID_C29_CPU_3;
+    }
+    
     return coreId;
 }
 #define SELF_CORE_ID                  (SIPC_readSelfCoreID())

@@ -34,13 +34,7 @@
 #include <security_common/drivers/secure_ipc_notify/soc/f29h85x/sipc_notify_cfg.h>
 #include <drivers/hw_include/f29h85x/cslr_soc.h>
 
-/* Dedicated hsm mailbox memories address and size */
-
-#if defined(__C29__)
-#define HSM_MBOX_MEM                (0x302C0000)
-#else
-#define HSM_MBOX_MEM                (0x4E040000)
-#endif
+/* Dedicated hsm mailbox memory size */
 
 #define HSM_MBOX_MEM_SIZE           ((2U*1024U))
 
@@ -59,7 +53,7 @@
 uint8_t gCore_Ids[MAX_SEC_CORES_WITH_HSM] =
 {
     CORE_ID_C29_CPU_1 ,
-    CORE_ID_C29_CPU_2 ,
+    CORE_ID_C29_CPU_3 ,
     CORE_ID_HSM0_0
 };
 /* Pointer to the Queues R5 -> HSM indexed by Sec master core Id */
@@ -89,15 +83,6 @@ SIPC_MailboxConfig gSIPC_SecureHostMboxConfig[CORE_ID_MAX - 1] =
             .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
             .swQ = NULL,
         },
-
-        { /* with HSM0_0 */
-            .writeDoneMailboxBaseAddr = C29_CPU_2_MBOX_WRITE,
-            .readReqMailboxBaseAddr = C29_CPU_2_MBOX_READ,
-            .readReqMailboxClrBaseAddr = C29_CPU_2_MBOX_READ_CLR,
-            .wrIntrBitPos = HSM0_0_MBOX_WRITE_PROC_BIT_POS,
-            .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
-            .swQ = NULL,
-        },
         { /* with HSM0_0 */
             .writeDoneMailboxBaseAddr = C29_CPU_3_MBOX_WRITE,
             .readReqMailboxBaseAddr = C29_CPU_3_MBOX_READ,
@@ -119,15 +104,6 @@ SIPC_MailboxConfig gSIPC_HsmMboxConfig[CORE_ID_MAX - 1] =
         .wrIntrBitPos = C29_CPU_1_MBOX_WRITE_PROC_BIT_POS,
         .rdIntrBitPos = C29_CPU_1_MBOX_READ_PROC_BIT_POS,
         .swQ = NULL,
-    },
-    { /* MBOX config with R5FSS0-1 */
-        .writeDoneMailboxBaseAddr = HSM0_0_MBOX_READ_DONE_ACK,
-        .readReqMailboxBaseAddr = HSM0_0_MBOX_READ_DONE,
-        .readReqMailboxClrBaseAddr = HSM0_0_MBOX_READ_DONE,
-        .wrIntrBitPos = C29_CPU_2_MBOX_WRITE_PROC_BIT_POS,
-        .rdIntrBitPos = C29_CPU_2_MBOX_READ_PROC_BIT_POS,
-        .swQ = NULL,
-
     },
     { /* MBOX config with R5FSS1-0 */
         .writeDoneMailboxBaseAddr = HSM0_0_MBOX_READ_DONE_ACK,
@@ -153,16 +129,6 @@ SIPC_InterruptConfig gSIPC_InterruptConfig[INTR_CFG_NUM_MAX][CORE_ID_MAX] =
                 CORE_INDEX_HSM,
             },
             .clearIntOnInit = 1 ,
-        },
-        /* Interrupt config for R5FSS0_1 Core */
-        {
-            .intNum = C29_CPU_2_MBOX_READ_ACK_INTR,   /* interrupt line on R5FSS0-1 */
-            .eventId = 0U,   /* not used */
-            .numCores = 1U,  /* number of cores that send messages which tied to this interrupt line */
-            .coreIdList = { /* sec core ID's tied to this interrupt line */
-                CORE_INDEX_HSM,
-            },
-            .clearIntOnInit = 1,
         },
         /* Interrupt config for R5FSS1_0 Core */
         {
