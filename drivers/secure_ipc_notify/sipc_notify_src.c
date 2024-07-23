@@ -160,7 +160,7 @@ static inline void SIPC_getReadMailbox(uint32_t *mailboxBaseAddr)
     }
     else
     {
-        *mailboxBaseAddr = NULL;
+        *mailboxBaseAddr = 0;
     }
 }
 
@@ -185,7 +185,7 @@ static inline void SIPC_getReadMailboxClear(uint32_t *mailboxBaseAddr)
     }
     else
     {
-        *mailboxBaseAddr = NULL;
+        *mailboxBaseAddr = 0;
     }
 }
 
