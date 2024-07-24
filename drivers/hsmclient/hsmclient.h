@@ -260,6 +260,24 @@ typedef struct RNGReq_t_
 
 /**
  * @brief
+ * This is the SecureBoot Stream type which holds the data for a specific bootloader
+ * to HSM call. This packet is needed by HSM the to do the required operation.
+ *
+ * @param StreamId		    Index of the streamId. 
+ * @param dataIn	        Pointer to the data in shared memory
+ * @param dataLen           Size of the data
+ * @param canBeEncrypted	Whether this data could be encrypted or not 	
+ */
+typedef struct SecureBoot_Stream_t_
+{
+    uint32_t  streamId ;            /**< Index of the streamId.*/
+    uint8_t*  dataIn ;              /**< Pointer to the data in shared memory.*/
+    uint32_t  dataLen ;             /**< Size of the data.*/
+    uint32_t  canBeEncrypted ;      /**< Whether this data could be encrypted or not.*/
+} SecureBoot_Stream_t ;
+
+/**
+ * @brief
  * Initialize the HSM client for current core.
  *
  * @param params [IN] SIPC_notify params.
@@ -450,6 +468,57 @@ int32_t HsmClient_procAuthBoot(HsmClient_t* HsmClient,
                                         uint8_t* cert,
                                         uint32_t cert_size,
                                         uint32_t timeout);
+
+/**
+ * @brief
+ *  The service issued to HSM Server helps with extended secure boot for
+ *  applications.
+ *
+ * @param HsmClient         [IN] Client object which is using this openDbgFirewalls API.
+ * @param secureBootInfo    [IN] pointer to the secure boot information object in 
+ *                               shared memory.
+ *
+ * @return
+ * 1. SystemP_SUCCESS if returns successfully
+ * 2. SystemP_FAILURE if NACK message is received or client id not registered.
+ * 3. SystemP_TIMEOUT if timeout exception occours.
+ */
+int32_t HsmClient_procAuthBootStart(HsmClient_t* HsmClient,
+                                        SecureBoot_Stream_t *secureBootInfo);
+
+/**
+ * @brief
+ *  The service issued to HSM Server helps with extended secure boot for
+ *  applications.
+ *
+ * @param HsmClient         [IN] Client object which is using this openDbgFirewalls API.
+ * @param secureBootInfo    [IN] pointer to the secure boot information object in 
+ *                               shared memory.
+ *
+ * @return
+ * 1. SystemP_SUCCESS if returns successfully
+ * 2. SystemP_FAILURE if NACK message is received or client id not registered.
+ * 3. SystemP_TIMEOUT if timeout exception occours.
+ */
+int32_t HsmClient_procAuthBootUpdate(HsmClient_t* HsmClient,
+                                        SecureBoot_Stream_t *secureBootInfo);
+
+/**
+ * @brief
+ *  The service issued to HSM Server helps with extended secure boot for
+ *  applications.
+ *
+ * @param HsmClient         [IN] Client object which is using this openDbgFirewalls API.
+ * @param secureBootInfo    [IN] pointer to the secure boot information object in 
+ *                               shared memory
+ *
+ * @return
+ * 1. SystemP_SUCCESS if returns successfully
+ * 2. SystemP_FAILURE if NACK message is received or client id not registered.
+ * 3. SystemP_TIMEOUT if timeout exception occours.
+ */
+int32_t HsmClient_procAuthBootFinish(HsmClient_t* HsmClient,
+                                        SecureBoot_Stream_t *secureBootInfo);
 
 /**
  * @brief

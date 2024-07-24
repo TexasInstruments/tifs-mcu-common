@@ -69,6 +69,12 @@ extern "C"
 #define HSM_MSG_GET_OTP_ROW_COUNT                (0x9027)
 /** @brief Secure Boot service type ID*/
 #define HSM_MSG_PROC_AUTH_BOOT					 (0xC120)
+/** @brief Secure Boot Streaming Start service type ID*/
+#define HSM_MSG_PROC_AUTH_BOOT_START			 (0xC12A)
+/** @brief Secure Boot Streaming Update service type ID*/
+#define HSM_MSG_PROC_AUTH_BOOT_UPDATE   		 (0xC12B)
+/** @brief Secure Boot Streaming Finish service type ID*/
+#define HSM_MSG_PROC_AUTH_BOOT_FINISH   		 (0xC12C)
 /** @brief Set Firewall service type ID*/
 #define HSM_MSG_SET_FIREWALL                     (0x9000U)
 /** @brief Set Firewall Interrupt service type ID*/

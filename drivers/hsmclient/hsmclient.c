@@ -51,11 +51,31 @@
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
+
 /**
  * @brief
  *        Macro calculates the cache-aligned size for a given buffer or data structure
  */
 #define GET_CACHE_ALIGNED_SIZE(x) ((x + CacheP_CACHELINE_ALIGNMENT) & ~(CacheP_CACHELINE_ALIGNMENT - 1))
+
+/**
+ * @brief
+ *        Maximum size of the HSM client message queue
+ */
+#define HSM_CLIENT_MSG_QUEUE_SIZE (1024U)
+
+/* ========================================================================== */
+/*                            Global Variables                                */
+/* ========================================================================== */
+
+static int32_t gLastSentIndex = -1 ;
+static int32_t gLastEnqueuedIndex = -1;
+static int32_t gNum_HsmRequestSent = 0;
+static volatile int32_t gNum_HsmResponseReceived = 0;
+static volatile int32_t gSecureBootStatus = SystemP_SUCCESS;
+static volatile int32_t gBootNotificationReceived = SystemP_FAILURE;
+
+static HsmMsg_t gHsmClientMsgQueue[HSM_CLIENT_MSG_QUEUE_SIZE];
 
 /*==========================================================================
  *                        Static Function Declarations
@@ -76,9 +96,36 @@ static uint16_t crc16_ccit(uint8_t* data, uint16_t length);
  * @param HsmClient client type
  * @param timeout time to wait for interrupt from HSM before throwing timeout
  *                exception.
- * @return SystemP_SUCCESS if transaction succesful else SystemP_FAILURE.
+ * @return SystemP_SUCCESS if transaction is successful else SystemP_FAILURE.
  */
 static int32_t HsmClient_SendAndRecv(HsmClient_t * HsmClient,uint32_t timeout);
+
+/**
+ * @brief
+ *      Generic send message api which enqueus the message in HSM client message
+ *      queue and tries to send the message via SIPC.
+ *      This API is non blocking in nature.
+ * @param message message that needs to be sent to the HSM core.
+ * @return SystemP_SUCCESS if transaction is successful else SystemP_FAILURE.
+ */
+static int32_t HsmClient_EnqueueAndSendMsg(HsmMsg_t message);
+
+/**
+ * @brief
+ *      Generic send message api which enqueus the message in HSM client message
+ *      queue and ensures all the messages present in the queue are sent via SIPC.
+ *      This API is blocking in nature.
+ * @param message message that needs to be sent to the HSM core
+ * @return SystemP_SUCCESS if transaction is successful else SystemP_FAILURE.
+ */
+static int32_t HsmClient_EnqueueAndSendMsgBlocking(HsmMsg_t message);
+
+/**
+ * @brief
+ *      Generic api which waits for all responses to be received 
+ * @return SystemP_SUCCESS if all responses are successful else SystemP_FAILURE.
+ */
+static int32_t HsmClient_waitForAllResponses();
 
 /*==============================================================================*
  *                          Static Functions definition.
@@ -97,6 +144,126 @@ static uint16_t crc16_ccit(uint8_t* data, uint16_t length)
         }
         return crc;
 }
+
+static int32_t HsmClient_EnqueueAndSendMsg(HsmMsg_t message)
+{
+	int32_t status = SystemP_FAILURE;
+	uint8_t localClientId = message.srcClientId ;
+    uint8_t remoteClientId = message.destClientId ;
+
+	message.crcMsg = crc16_ccit((uint8_t*)&message,(sizeof(HsmMsg_t)-2));
+
+	if (gLastEnqueuedIndex < (HSM_CLIENT_MSG_QUEUE_SIZE - 1))
+	{
+		gHsmClientMsgQueue[++gLastEnqueuedIndex] = message;
+
+        /* Till the boot notify is not received, simply enqueue the message */
+		if (gBootNotificationReceived == SystemP_SUCCESS)
+		{
+			while ((gSecureBootStatus == SystemP_SUCCESS) && gLastSentIndex < gLastEnqueuedIndex)
+			{
+                /* 
+                    Do not wait in case the SIPC software Queue is full and simply abort with error.
+                    This is done in order to make this call non blocking.
+                */
+				status = SIPC_sendMsg(CORE_INDEX_HSM, remoteClientId,localClientId,
+											(uint8_t*)&gHsmClientMsgQueue[gLastSentIndex + 1], ABORT_ON_FIFO_FULL);
+                
+                /* Successfully able to send the message via SIPC */
+				if (status == SystemP_SUCCESS)
+				{
+					gNum_HsmRequestSent++;
+					gLastSentIndex++;
+
+				}
+                /* 
+                    Failed to send the message because the SIPC Software FIFO is full.
+                    Retry in the next call to this function or in the finish call.
+                */
+				else if (status == SystemP_FAILURE)
+				{
+					status = SystemP_SUCCESS;
+					break;
+				}
+				else
+				{
+					status = SystemP_FAILURE;
+					break;
+				}
+			}
+		}
+		else
+		{
+			status = SystemP_SUCCESS;
+		}
+	}
+	else
+	{
+		status = SystemP_FAILURE;
+	}
+
+	return status;
+}
+
+static int32_t HsmClient_EnqueueAndSendMsgBlocking(HsmMsg_t message)
+{
+	int32_t status = SystemP_FAILURE;
+	uint8_t localClientId = message.srcClientId ;
+    uint8_t remoteClientId = message.destClientId ;
+
+	message.crcMsg = crc16_ccit((uint8_t*)&message,(sizeof(HsmMsg_t)-2));
+
+	if (gLastEnqueuedIndex < (HSM_CLIENT_MSG_QUEUE_SIZE - 1))
+	{
+		gHsmClientMsgQueue[++gLastEnqueuedIndex] = message;
+
+        /* 
+            If the boot notification is not received, we wait for it indefinitely 
+            and once it arrives we begin sending our request packets.
+        */
+		while(gBootNotificationReceived == SystemP_FAILURE)
+		{
+		}
+
+		while ((gSecureBootStatus == SystemP_SUCCESS) && (gLastSentIndex < gLastEnqueuedIndex))
+		{
+            /* 
+                In this call, we want to wait in case the SIPC software Queue is full
+                and we simply abort with error. This is done in order to make sure that
+                all the requests to HSM are sent in order.
+            */
+			status = SIPC_sendMsg(CORE_INDEX_HSM, remoteClientId,localClientId,
+										(uint8_t*)&gHsmClientMsgQueue[gLastSentIndex + 1], WAIT_IF_FIFO_FULL);
+
+			if (status == SystemP_SUCCESS)
+			{
+				gNum_HsmRequestSent++;
+				gLastSentIndex++;
+			}
+			else
+			{
+				status = SystemP_FAILURE;
+				break;
+			}
+		}
+	}
+	else
+	{
+		status = SystemP_FAILURE;
+	}
+
+	return status;
+}
+
+static int32_t HsmClient_waitForAllResponses()
+{
+	while ((gSecureBootStatus == SystemP_SUCCESS) && (gNum_HsmResponseReceived < gNum_HsmRequestSent))
+	{
+	}
+
+	return gSecureBootStatus;
+}
+
 
 static int32_t HsmClient_SendAndRecv(HsmClient_t * HsmClient,uint32_t timeout)
 {
@@ -159,11 +326,47 @@ void HsmClient_isr(uint8_t remoteCoreId,uint8_t localClientId ,
                                uint8_t remoteClientId , uint8_t* msgValue, void* args)
 {
     HsmClient_t *HsmClient = (HsmClient_t*) args;
+    CSL_mss_ctrlRegs * ptrMSSCtrlRegs = (CSL_mss_ctrlRegs *)CSL_MSS_CTRL_U_BASE;
+
     /* here we will just post the semaphore */
     /* copy message to client response variable */
     /* As this ISR is blocking, quickly copy the message and exit ISR */
     memcpy(&HsmClient->RespMsg,msgValue,SIPC_MSG_SIZE);
     SemaphoreP_post(&HsmClient->Semaphore);
+
+	/*
+		Analyze the received response packet.
+	*/
+	if (HsmClient->RespMsg.serType == HSM_MSG_BOOT_NOTIFY)
+	{
+		gBootNotificationReceived = SystemP_SUCCESS;
+		gSecureBootStatus = SystemP_SUCCESS;
+    
+        ptrMSSCtrlRegs->HW_SPARE_RW1 = 0x1U;
+	}
+	else
+	{
+		if(gSecureBootStatus == SystemP_SUCCESS)
+		{
+			gNum_HsmResponseReceived++;
+			if(HsmClient->RespMsg.flags == HSM_FLAG_NACK)
+			{
+				gSecureBootStatus = SystemP_FAILURE;
+			}
+			else if(HsmClient->RespMsg.flags == HSM_FLAG_ACK)
+			{
+				gSecureBootStatus = SystemP_SUCCESS;
+			}
+			else
+			{
+				gSecureBootStatus = SystemP_FAILURE;
+			}
+		}
+		else
+		{
+			gSecureBootStatus = SystemP_FAILURE;
+		}
+	}
 }
 
 /* return SystemP_FAILURE if clientId is greater the max or
@@ -911,6 +1114,112 @@ int32_t HsmClient_procAuthBoot(HsmClient_t* HsmClient,
         status = SystemP_TIMEOUT;
     }
     return status;
+}
+
+int32_t HsmClient_procAuthBootStart(HsmClient_t* HsmClient,
+                                        SecureBoot_Stream_t *secureBootInfo)
+{
+    int32_t status = SystemP_FAILURE;
+    /* Create the message object */
+	HsmMsg_t startMsg;
+
+    /*populate the send message structure */
+    startMsg.destClientId = HSM_CLIENT_ID_1;
+    startMsg.srcClientId = HsmClient->ClientId;
+
+    /* Always expect acknowledgement from HSM server */
+    startMsg.flags = HSM_FLAG_AOP;
+    startMsg.serType = HSM_MSG_PROC_AUTH_BOOT_START;
+    startMsg.args = (void*)secureBootInfo;
+
+    /* Add arg crc */
+    startMsg.crcArgs = crc16_ccit((uint8_t*)secureBootInfo, sizeof(SecureBoot_Stream_t));
+
+    /* Change the Arguments Address in Physical Address */
+    startMsg.args = (void*)(uintptr_t)SOC_virtToPhy(secureBootInfo);
+
+    /*
+       Write back the cert and
+       invalidate the cache before passing it to HSM
+    */
+    CacheP_wbInv(secureBootInfo, GET_CACHE_ALIGNED_SIZE(sizeof(SecureBoot_Stream_t)), CacheP_TYPE_ALL);
+
+	status = HsmClient_EnqueueAndSendMsg(startMsg);
+
+	return status;
+}
+
+int32_t HsmClient_procAuthBootUpdate(HsmClient_t* HsmClient,
+                                        SecureBoot_Stream_t *secureBootInfo)
+{
+
+    int32_t status = SystemP_FAILURE;
+    /* Create the message object */
+	HsmMsg_t updateMsg;
+
+    /*populate the send message structure */
+    updateMsg.destClientId = HSM_CLIENT_ID_1;
+    updateMsg.srcClientId = HsmClient->ClientId;
+
+    /* Always expect acknowledgement from HSM server */
+    updateMsg.flags = HSM_FLAG_AOP;
+    updateMsg.serType = HSM_MSG_PROC_AUTH_BOOT_UPDATE;
+    updateMsg.args = (void*)secureBootInfo;
+
+    /* Add arg crc */
+    updateMsg.crcArgs = crc16_ccit((uint8_t*)secureBootInfo, sizeof(SecureBoot_Stream_t));
+
+    /* Change the Arguments Address in Physical Address */
+    updateMsg.args = (void*)(uintptr_t)SOC_virtToPhy(secureBootInfo);
+
+    /*
+       Write back the cert and
+       invalidate the cache before passing it to HSM
+    */
+    CacheP_wbInv(secureBootInfo, GET_CACHE_ALIGNED_SIZE(sizeof(SecureBoot_Stream_t)), CacheP_TYPE_ALL);
+
+	status = HsmClient_EnqueueAndSendMsg(updateMsg);
+
+	return status;
+}
+
+int32_t HsmClient_procAuthBootFinish(HsmClient_t* HsmClient,
+                                        SecureBoot_Stream_t *secureBootInfo)
+{
+    
+    int32_t status = SystemP_FAILURE;
+	/* Create the message object */
+    HsmMsg_t finishMsg;
+
+    /*populate the send message structure */
+    finishMsg.destClientId = HSM_CLIENT_ID_1;
+    finishMsg.srcClientId = HsmClient->ClientId;
+
+    /* Always expect acknowledgement from HSM server */
+    finishMsg.flags = HSM_FLAG_AOP;
+    finishMsg.serType = HSM_MSG_PROC_AUTH_BOOT_FINISH;
+    finishMsg.args = (void*)secureBootInfo;
+
+    /* Add arg crc */
+    finishMsg.crcArgs = crc16_ccit((uint8_t*)secureBootInfo, sizeof(SecureBoot_Stream_t));
+
+    /* Change the Arguments Address in Physical Address */
+	finishMsg.args = (void*)(uintptr_t)SOC_virtToPhy(secureBootInfo);
+
+    /*
+       Write back the cert and
+       invalidate the cache before passing it to HSM
+    */
+    CacheP_wbInv(secureBootInfo, GET_CACHE_ALIGNED_SIZE(sizeof(SecureBoot_Stream_t)), CacheP_TYPE_ALL);
+
+	status = HsmClient_EnqueueAndSendMsgBlocking(finishMsg);
+
+	if (status == SystemP_SUCCESS)
+	{
+		status = HsmClient_waitForAllResponses();
+	}
+
+	return status;
 }
 
 int32_t HsmClient_setFirewall(HsmClient_t* HsmClient,
