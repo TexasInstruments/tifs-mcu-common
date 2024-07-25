@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -35,6 +35,7 @@
 /* ========================================================================== */
 
 #include <security_common/drivers/crypto/dthe/dma.h>
+#include <stdlib.h>
 
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */

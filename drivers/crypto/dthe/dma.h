@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2024 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -219,7 +219,7 @@ typedef struct DMA_Fxns_s
 /** \brief DMA instance attributes - used during init time */
 struct DMA_Params_s
 {
- #if defined(SOC_AM263X) || defined(SOC_AM263PX) || defined(SOC_AM273X)    
+ #if defined(SOC_AM263X) || defined(SOC_AM263PX) || defined(SOC_AM273X) || defined(SOC_AWR294X) || defined(SOC_AM261X)
     uint32_t                baseAddr;
     /**< Base Address */
     uint32_t                regionId;
