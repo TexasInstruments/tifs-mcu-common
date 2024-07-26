@@ -239,7 +239,7 @@ int32_t EDMA_Config_RxChannel(DMA_Handle handle, uint32_t *srcAddress, uint32_t 
 {
     int32_t         status = SystemP_FAILURE;
     DMA_Config      *dmaCfg;
-    EDMA_Handle     *edmaHandler; 
+    EDMA_Handle     edmaHandler; 
     if(NULL == handle)
     {
         status  = SystemP_FAILURE;
@@ -328,7 +328,7 @@ int32_t EDMA_disableTxChannel(DMA_Handle handle)
 {
     int32_t         status = SystemP_FAILURE;
     DMA_Config      *dmaCfg;
-    EDMA_Handle     *edmaHandler;
+    EDMA_Handle     edmaHandler;
     
     if(NULL == handle)
     {
@@ -357,7 +357,7 @@ int32_t EDMA_disableRxChannel(DMA_Handle handle)
 {
     int32_t         status = SystemP_FAILURE;
     DMA_Config      *dmaCfg;
-    EDMA_Handle     *edmaHandler;
+    EDMA_Handle     edmaHandler;
     
     if(NULL == handle)
     {
