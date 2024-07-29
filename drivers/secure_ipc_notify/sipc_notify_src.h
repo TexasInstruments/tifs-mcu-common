@@ -107,6 +107,16 @@ extern SIPC_SwQueue* gSIPC_QueSecureHostToHsm [MAX_SEC_CORES_WITH_HSM - 1];
  */
 extern SIPC_SwQueue* gSIPC_QueHsmToSecureHost[MAX_SEC_CORES_WITH_HSM - 1];
 
+/**
+ * @brief Register SIPC interrupts for SOC
+ *
+ * This API will register SIPC interrupts.
+ * This API acts as an abstraction layer to register
+ * interrupts for different SOCs having different 
+ * interrupt controllers
+ */
+int32_t SIPC_Register_Isr(HwiP_Params *pHwiParams, SIPC_InterruptConfig *pInterruptConfig, SIPC_Params *params, HwiP_FxnCallback callback);
+
 #ifdef __cplusplus
 }
 #endif

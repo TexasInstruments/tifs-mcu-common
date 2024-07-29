@@ -153,3 +153,19 @@ SIPC_InterruptConfig gSIPC_InterruptConfig[INTR_CFG_NUM_MAX][CORE_ID_MAX] =
         }
     }
 };
+
+int32_t SIPC_Register_Isr(HwiP_Params *pHwiParams, SIPC_InterruptConfig *pInterruptConfig, SIPC_Params *params, HwiP_FxnCallback callback)
+{
+    int32_t status = 0;
+
+    pHwiParams->intNum = pInterruptConfig->intNum;
+    pHwiParams->callback = callback;
+    pHwiParams->args = (void*)pInterruptConfig;
+    pHwiParams->priority = params->intrPriority;
+
+    status |= HwiP_construct(
+            &pInterruptConfig->hwiObj,
+            pHwiParams);
+    
+    return status;
+}
