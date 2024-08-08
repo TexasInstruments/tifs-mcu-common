@@ -62,7 +62,7 @@
  * @brief
  *        Maximum size of the HSM client message queue
  */
-#define HSM_CLIENT_MSG_QUEUE_SIZE (1024U)
+#define HSM_CLIENT_MSG_QUEUE_SIZE (1024)
 
 /* ========================================================================== */
 /*                            Global Variables                                */
