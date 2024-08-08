@@ -48,6 +48,8 @@
 #include <string.h>
 #include <kernel/dpl/DebugP.h>
 
+void Hsmclient_updateBootNotificationRegister(void);
+
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
@@ -326,7 +328,6 @@ void HsmClient_isr(uint8_t remoteCoreId,uint8_t localClientId ,
                                uint8_t remoteClientId , uint8_t* msgValue, void* args)
 {
     HsmClient_t *HsmClient = (HsmClient_t*) args;
-    CSL_mss_ctrlRegs * ptrMSSCtrlRegs = (CSL_mss_ctrlRegs *)CSL_MSS_CTRL_U_BASE;
 
     /* here we will just post the semaphore */
     /* copy message to client response variable */
@@ -341,8 +342,8 @@ void HsmClient_isr(uint8_t remoteCoreId,uint8_t localClientId ,
 	{
 		gBootNotificationReceived = SystemP_SUCCESS;
 		gSecureBootStatus = SystemP_SUCCESS;
-    
-        ptrMSSCtrlRegs->HW_SPARE_RW1 = 0x1U;
+
+        Hsmclient_updateBootNotificationRegister();
 	}
 	else
 	{

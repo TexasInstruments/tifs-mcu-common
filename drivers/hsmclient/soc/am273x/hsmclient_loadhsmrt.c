@@ -245,6 +245,12 @@ static void Hsmclient_mboxRxISR(void *args)
     /*HSMRT down load completed*/
     gHsmRtDownloadComplete = 1;
 
+    /* 
+        Update the Spare register which can be used by the application 
+        to query HSM Runtime load status.
+    */
+    ptrMSSCtrlRegs->HW_SPARE_RW0 = 0x1U;
+
 }
 
 /*==============================================================================*
@@ -322,4 +328,13 @@ int32_t Hsmclient_loadHSMRtFirmware(HsmClient_t *NotifyClient, const uint8_t *pH
         status = SystemP_FAILURE;
     }
     return status;
+}
+
+void Hsmclient_updateBootNotificationRegister(void)
+{
+    /* 
+        Update the Spare register which can be used by the application 
+        to query HSM Runtime Boot notification status.
+    */
+    ptrMSSCtrlRegs->HW_SPARE_RW1 = 0x1U;
 }
