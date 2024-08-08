@@ -254,7 +254,7 @@ static void Hsmclient_mboxRxISR(void *args)
 }
 
 /*==============================================================================*
- *                          public Function defination.
+ *                          public Function definition.
  *==============================================================================*/
 
 int32_t Hsmclient_loadHSMRtFirmware(HsmClient_t *NotifyClient, const uint8_t *pHSMRt_firmware)
