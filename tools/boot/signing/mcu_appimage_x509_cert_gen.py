@@ -14,6 +14,8 @@ from random import randint
 import shutil
 from textwrap import dedent
 from hkdf import hkdf
+from elftools.elf.elffile import ELFFile
+from elftools.elf.segments import Segment
 
 # Some globals
 g_sha_to_use = "sha512"
@@ -203,6 +205,14 @@ def get_enc_filename(fname):
     return fname+"-enc"
 
 
+def is_an_elf_file(bin_file_name):
+    try:
+        with open(bin_file_name, 'rb') as fp:
+            parsed_elf = ELFFile(fp)
+        return True
+    except Exception as e:
+        return False
+
 def get_encrypted_file_iv_rs(bin_file_name, enc_key):
     if((enc_key is None) or (not os.path.exists(enc_key))):
         # Error, enc key has to be given
@@ -224,30 +234,92 @@ def get_encrypted_file_iv_rs(bin_file_name, enc_key):
         enc_iv = subprocess.check_output('openssl rand 16', shell=True)
         enc_iv = binascii.hexlify(enc_iv).decode('ascii')
         v_TEST_IMAGE_ENC_IV = enc_iv
-
-        # we don't need the value of enc_rs as hex for encryption, so keep the bytes object
-        enc_rs = subprocess.check_output('openssl rand 32', shell=True)
-        v_TEST_IMAGE_ENC_RS = binascii.hexlify(enc_rs).decode('ascii')
-
-        # Pad zeros to a temporary binary to make the size multiple of 16
-        zeros_pad = bytearray(16 - (os.path.getsize(bin_file_name) % 16))
+        
         tempfile_name = "tmpfile" + str(randint(1111, 9999))
         encbin_name = get_enc_filename(bin_file_name)
+        enctempfile_name = tempfile_name+"-enc"
 
-        shutil.copy(bin_file_name, tempfile_name)
+        # MCELF encryption differs from RPRC encryption
+        # We only encrypt a portion of the image if the 
+        # input format is MCELF
+        if(is_an_elf_file(bin_file_name)):
+            # MCELF encryption will happen.
+            
+            shutil.copy(bin_file_name, tempfile_name)
+            
+            data_to_encrypt: bytes = b''
+            header_data: bytes = b'' 
 
-        # append zeros to tempfile
-        with open(tempfile_name, "ab") as f:
-            f.write(zeros_pad)
-            # append the enc_rs value to the padded tempfile
-            f.write(enc_rs)
+            with open(bin_file_name, 'r+b') as f1, open(enctempfile_name, '+wb') as f2:
+                    file_data = f1.read()
 
-        # Finally generate the encrypted image
-        subprocess.check_output('openssl aes-256-cbc -e -K {} -iv {} -in {} -out {} -nopad'.format(
-            enckey, enc_iv, tempfile_name, encbin_name), shell=True)
+                    parsed_elf = ELFFile(f1)
+                    
+                    # The structure of MCELF is as shown below,
+                    # | ELF Header | PHT | Note Segment | Load Segment | ..... | Load Segment | RS Note Segment
+                    # The ELF Header, PHT and first Note Segments should never be encrypted
+                    # So we find the offset of the first loadable segment and encrypt everything after that
+                    for seg in parsed_elf.iter_segments():
+                        if seg['p_type'] == 'PT_LOAD':
+                            offset = seg['p_offset']
+                            header_data = file_data[:offset]
+                            data_to_encrypt = file_data[offset:]
+                            break
+                    
+                    # Copy the RS string placed by the multicore-elf tool so that it
+                    # can be put in the certificate
+                    v_TEST_IMAGE_ENC_RS = (file_data[-32:]).hex()
 
-        # Delete the tempfile
-        os.remove(tempfile_name)
+                    # Only copy the data after the first Note segment 
+                    # to the file intended to be encrypted 
+                    f2.write(data_to_encrypt)
+
+            # Finally generate the encrypted image from the temp file
+            subprocess.check_output('openssl aes-256-cbc -e -K {} -iv {} -in {} -out {} -nopad'.format(
+                enckey, enc_iv, enctempfile_name, tempfile_name), shell=True)
+            
+            encrypted_data: bytes = b''
+            # copy the encrypted segment data to a buffer 
+            with open(tempfile_name, 'r+b') as f:
+                encrypted_data = f.read()
+            
+            # append the encrypted data to the unencrypted header information
+            with open(enctempfile_name, '+wb') as f:
+                f.write(header_data + encrypted_data)
+
+            # finally copy the contents from the temp file to the intended file
+            shutil.copy(enctempfile_name, encbin_name)
+
+            # remove the temporary files 
+            os.remove(enctempfile_name)
+            os.remove(tempfile_name)
+
+        else:
+            # RPRC encryption will happen.
+
+            # we don't need the value of enc_rs as hex for encryption, so keep the bytes object
+            enc_rs = subprocess.check_output('openssl rand 32', shell=True)
+            v_TEST_IMAGE_ENC_RS = binascii.hexlify(enc_rs).decode('ascii')
+
+            # Pad zeros to a temporary binary to make the size multiple of 16
+            zeros_pad = bytearray(16 - (os.path.getsize(bin_file_name) % 16))
+            tempfile_name = "tmpfile" + str(randint(1111, 9999))
+            encbin_name = get_enc_filename(bin_file_name)
+
+            shutil.copy(bin_file_name, tempfile_name)
+
+            # append zeros to tempfile
+            with open(tempfile_name, "ab") as f:
+                f.write(zeros_pad)
+                # append the enc_rs value to the padded tempfile
+                f.write(enc_rs)
+
+            # Finally generate the encrypted image
+            subprocess.check_output('openssl aes-256-cbc -e -K {} -iv {} -in {} -out {} -nopad'.format(
+                enckey, enc_iv, tempfile_name, encbin_name), shell=True)
+
+            # Delete the tempfile
+            os.remove(tempfile_name)
 
         return encbin_name, v_TEST_IMAGE_ENC_IV, v_TEST_IMAGE_ENC_RS
 
