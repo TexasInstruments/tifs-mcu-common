@@ -77,13 +77,21 @@ void Hsmclient_updateBootNotificationRegister(void);
 /*                            Global Variables                                */
 /* ========================================================================== */
 
+/* This variable indicates HSM Runtime load status */
+volatile uint32_t gHsmrtLoadStatus = HSMRT_LOAD_NOT_REQUESTED;
+
+/* This variable indicates Secure Boot status */
+static volatile int32_t gSecureBootStatus = SystemP_SUCCESS;
+
+/* This variable indicates whether Boot notification is received or not */
+static volatile int32_t gBootNotificationReceived = SystemP_FAILURE;
+
 static int32_t gLastSentIndex = -1 ;
 static int32_t gLastEnqueuedIndex = -1;
 static int32_t gNum_HsmRequestSent = 0;
 static volatile int32_t gNum_HsmResponseReceived = 0;
-static volatile int32_t gSecureBootStatus = SystemP_SUCCESS;
-static volatile int32_t gBootNotificationReceived = SystemP_FAILURE;
 
+/* Queue used to store HSM client messages that need to be dispatched via SIPC */
 static HsmMsg_t gHsmClientMsgQueue[HSM_CLIENT_MSG_QUEUE_SIZE];
 
 /*==========================================================================
@@ -230,31 +238,32 @@ static int32_t HsmClient_EnqueueAndSendMsgBlocking(HsmMsg_t message)
             If the boot notification is not received, we wait for it indefinitely 
             and once it arrives we begin sending our request packets.
         */
-		while(gBootNotificationReceived == SystemP_FAILURE)
-		{
-		}
+		status = HsmClient_checkAndWaitForBootNotification();
 
-		while ((gSecureBootStatus == SystemP_SUCCESS) && (gLastSentIndex < gLastEnqueuedIndex))
-		{
-            /* 
-                In this call, we want to wait in case the SIPC software Queue is full
-                and we simply abort with error. This is done in order to make sure that
-                all the requests to HSM are sent in order.
-            */
-			status = SIPC_sendMsg(CORE_INDEX_HSM, remoteClientId,localClientId,
-										(uint8_t*)&gHsmClientMsgQueue[gLastSentIndex + 1], WAIT_IF_FIFO_FULL);
+        if (status == SystemP_SUCCESS)
+        {
+            while ((gSecureBootStatus == SystemP_SUCCESS) && (gLastSentIndex < gLastEnqueuedIndex))
+		    {
+                /* 
+                    In this call, we want to wait in case the SIPC software Queue is full
+                    and we simply abort with error. This is done in order to make sure that
+                    all the requests to HSM are sent in order.
+                */
+                status = SIPC_sendMsg(CORE_INDEX_HSM, remoteClientId,localClientId,
+                                            (uint8_t*)&gHsmClientMsgQueue[gLastSentIndex + 1], WAIT_IF_FIFO_FULL);
 
-			if (status == SystemP_SUCCESS)
-			{
-				gNum_HsmRequestSent++;
-				gLastSentIndex++;
-			}
-			else
-			{
-				status = SystemP_FAILURE;
-				break;
-			}
-		}
+                if (status == SystemP_SUCCESS)
+                {
+                    gNum_HsmRequestSent++;
+                    gLastSentIndex++;
+                }
+                else
+                {
+                    status = SystemP_FAILURE;
+                    break;
+                }
+		    }
+        }		
 	}
 	else
 	{
@@ -375,6 +384,59 @@ void HsmClient_isr(uint8_t remoteCoreId,uint8_t localClientId ,
 			gSecureBootStatus = SystemP_FAILURE;
 		}
 	}
+}
+
+int32_t HsmClient_checkAndWaitForBootNotification(void)
+{
+    int32_t status = SystemP_FAILURE;
+    
+   
+    if (gHsmrtLoadStatus == HSMRT_LOAD_NOT_REQUESTED) 
+    {
+         /* 
+            If HSM Runtime load is not requested up till now,
+            just return Success. 
+        */
+        status = SystemP_SUCCESS;
+    }
+    else if (gHsmrtLoadStatus == HSMRT_LOAD_REQUESTED) 
+    {
+        /* Only wait if HSM Runtime load is requested up till now. */
+        while (gHsmrtLoadStatus == HSMRT_LOAD_REQUESTED) 
+        {
+        }
+
+        if (gHsmrtLoadStatus == HSMRT_LOAD_SUCCEEDED)
+        {
+            /* Only wait for Boot notification HSM Runtime load is successful */
+            while (gBootNotificationReceived == SystemP_FAILURE)
+            {
+            }
+            status = SystemP_SUCCESS;
+        }
+        else 
+        {
+            status = SystemP_FAILURE;
+        }
+    }
+    else if (gHsmrtLoadStatus == HSMRT_LOAD_FAILED)
+    {
+        status = SystemP_FAILURE;
+    }
+    else if (gHsmrtLoadStatus == HSMRT_LOAD_SUCCEEDED) 
+    {
+        /* Only wait for Boot notification HSM Runtime load is successful */
+        while (gBootNotificationReceived == SystemP_FAILURE)
+        {
+        }
+        status = SystemP_SUCCESS;
+    }
+    else 
+    {
+        status = SystemP_FAILURE;
+    }
+
+    return status;
 }
 
 /* return SystemP_FAILURE if clientId is greater the max or
@@ -1058,7 +1120,7 @@ int32_t HsmClient_procAuthBoot(HsmClient_t* HsmClient,
                                         uint32_t timeout)
 {
     /* make the message */
-    int32_t status ;
+    int32_t status = SystemP_FAILURE;
     uint16_t crcArgs;
 
     /*populate the send message structure */
@@ -1076,13 +1138,21 @@ int32_t HsmClient_procAuthBoot(HsmClient_t* HsmClient,
     /* Change the Arguments Address in Physical Address */
     HsmClient->ReqMsg.args = (void*)(uintptr_t)SOC_virtToPhy(cert);
 
-    /*
-       Write back the cert and
-       invalidate the cache before passing it to HSM
-    */
-    CacheP_wbInv(cert, GET_CACHE_ALIGNED_SIZE(cert_size), CacheP_TYPE_ALL);
+    status = HsmClient_waitForBootNotify(HsmClient, timeout);
+    if (status == SystemP_SUCCESS)
+    {
+        /*
+            Write back the cert and
+            invalidate the cache before passing it to HSM
+        */
+        CacheP_wbInv(cert, GET_CACHE_ALIGNED_SIZE(cert_size), CacheP_TYPE_ALL);
 
-    status = HsmClient_SendAndRecv(HsmClient, timeout);
+        status = HsmClient_SendAndRecv(HsmClient, timeout);
+    }
+    else 
+    {
+        status = SystemP_FAILURE;
+    }
     if(status == SystemP_SUCCESS)
     {
         /* the OpenDbgFirewalls has been populated by HSM server

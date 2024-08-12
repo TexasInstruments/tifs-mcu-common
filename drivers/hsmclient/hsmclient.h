@@ -56,6 +56,27 @@ extern "C" {
 
 /**
  * @brief
+ *        HSMRT load has not been requested
+ */
+#define HSMRT_LOAD_NOT_REQUESTED  (0U)
+/**
+ * @brief
+ *        HSMRT load has been requested
+ */
+#define HSMRT_LOAD_REQUESTED      (1U)
+/**
+ * @brief
+ *        HSMRT load has failed
+ */
+#define HSMRT_LOAD_FAILED         (2U)
+/**
+ * @brief
+ *        HSMRT load has succeeded
+ */
+#define HSMRT_LOAD_SUCCEEDED      (3U)
+
+/**
+ * @brief
  * type for reading HSMRt version.
  *
  */
@@ -269,6 +290,18 @@ typedef struct SecureBoot_Stream_t_
     uint32_t  dataLen ;             /**< Size of the data.*/
     uint8_t  canBeEncrypted ;      /**< Whether this data could be encrypted or not.*/
 } __attribute__((packed)) SecureBoot_Stream_t ;
+
+/**
+ * @brief
+ * This API waits for HSMRT load if requested
+ * and then waits for boot notification. In case of
+ * failure in HSMRT load it returns SystemP_FAILURE.
+ * 
+ * @return
+ * 1. SystemP_SUCCESS if HSMRT load is successful.
+ * 2. SystemP_FAILURE if HSMRT load fails.
+ */
+int32_t HsmClient_checkAndWaitForBootNotification(void);
 
 /**
  * @brief

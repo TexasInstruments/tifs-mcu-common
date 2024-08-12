@@ -175,9 +175,17 @@ typedef struct Hsmclient_ipcLoadHSMResult_t
  *                          Section-1 Global Variables
  *==========================================================================*/
 
+extern volatile int32_t gHsmrtLoadStatus;
+
 /* variable foer hsm RT firmware download complete status */
 volatile uint32_t gHsmRtDownloadComplete = 0;
 CSL_mss_ctrlRegs * ptrMSSCtrlRegs = (CSL_mss_ctrlRegs *)CSL_MSS_CTRL_U_BASE;
+
+/* variables to be used by the maibox ISR and the loadHSMRtFirmware function */
+Hsmclient_ipcLoadHSM         gLoadHSMImage;
+Hsmclient_ipcLoadHSMResult   gLoadHSMResult = {{0}};
+HwiP_Params gHwiParams;
+HwiP_Object gHwiObjReadReq;
 
 /*==========================================================================
  *                          static Function Declarations
@@ -231,6 +239,7 @@ static uint16_t Hsmclient_computeIPCChecksum(uint8_t* ptrBuffer, uint32_t sizeMs
 
 static void Hsmclient_mboxRxISR(void *args)
 {
+    uint16_t orgChecksum;
     Hsmclient_ipcLoadHSMResult *ploadHSMResult = (Hsmclient_ipcLoadHSMResult *) args;
 
     /* clear interrupt from the processor */
@@ -242,14 +251,39 @@ static void Hsmclient_mboxRxISR(void *args)
     /* clear Read done */
     CSL_FINSR (ptrMSSCtrlRegs->R5SS0_CORE0_MBOX_READ_DONE, 24, 24, 1U);
 
-    /*HSMRT down load completed*/
-    gHsmRtDownloadComplete = 1;
+    orgChecksum = gLoadHSMResult.header.checksum;
+    
+    gLoadHSMResult.header.checksum = 0U;
+    
+    /* Compute the checksum: */
+    gLoadHSMResult.header.checksum = Hsmclient_computeIPCChecksum ((uint8_t*)&gLoadHSMResult, sizeof(gLoadHSMResult));
+    
+    /* Check for checksum match and firmware load status signature */
+    if ((gLoadHSMResult.header.checksum != orgChecksum) || (gLoadHSMResult.status != Hsmclient_ipcLoadHSMStatus_SUCCESS))
+    {
+        /* Error: Invalid checksum */
+        gHsmrtLoadStatus = HSMRT_LOAD_FAILED;
+    }
+    else if ((gLoadHSMResult.header.checksum == orgChecksum) && (gLoadHSMResult.status == Hsmclient_ipcLoadHSMStatus_SUCCESS))
+    {
+        gHsmrtLoadStatus = HSMRT_LOAD_SUCCEEDED;
+    }
+    else 
+    {
+        gHsmrtLoadStatus = HSMRT_LOAD_FAILED;
+    }
 
-    /* 
-        Update the Spare register which can be used by the application 
-        to query HSM Runtime load status.
-    */
-    ptrMSSCtrlRegs->HW_SPARE_RW0 = 0x1U;
+
+    HwiP_destruct(&gHwiObjReadReq);
+
+    if (gHsmrtLoadStatus == HSMRT_LOAD_SUCCEEDED)
+    {
+        /* 
+            Update the Spare register which can be used 
+            by an application to query HSM Runtime load status.
+        */
+        ptrMSSCtrlRegs->HW_SPARE_RW0 = 0x1U;
+    }
 
 }
 
@@ -260,66 +294,43 @@ static void Hsmclient_mboxRxISR(void *args)
 int32_t Hsmclient_loadHSMRtFirmware(HsmClient_t *NotifyClient, const uint8_t *pHSMRt_firmware)
 {
     int32_t  status   = SystemP_SUCCESS;
-    Hsmclient_ipcLoadHSM         loadHSMImage;
-    Hsmclient_ipcLoadHSMResult   loadHSMResult = {{0}};
-    uint16_t            orgChecksum;
-    HwiP_Params hwiParams;
-    HwiP_Object hwiObjReadReq;
     uint8_t *ptrMessage = (uint8_t *) CSL_HSM_MBOX_SRAM_U_BASE;
 
     if (pHSMRt_firmware != NULL)
     {
+        /* 
+            update this variable to indicate 
+            HSM Runtime has been requested by SBL.
+        */
+        gHsmrtLoadStatus = HSMRT_LOAD_REQUESTED;
+
         /* clear any pending Interrupt */
         HwiP_clearInt(CSLR_R5FSS0_CORE0_INTR_MBOX_READ_REQ);
 
         /* register interrupt for Rx Mailbox */
-        HwiP_Params_init(&hwiParams);
-        hwiParams.intNum = CSLR_R5FSS0_CORE0_INTR_MBOX_READ_REQ;
-        hwiParams.callback = Hsmclient_mboxRxISR;
-        hwiParams.args = &loadHSMResult;
-        hwiParams.isPulse = 0;
+        HwiP_Params_init(&gHwiParams);
+        gHwiParams.intNum = CSLR_R5FSS0_CORE0_INTR_MBOX_READ_REQ;
+        gHwiParams.callback = Hsmclient_mboxRxISR;
+        gHwiParams.args = &gLoadHSMResult;
+        gHwiParams.isPulse = 0;
 
         status |= HwiP_construct(
-            &hwiObjReadReq,
-            &hwiParams);
+            &gHwiObjReadReq,
+            &gHwiParams);
 
         /* Populate the ipcExportMsgType_LOAD_HSM message header: */
-        loadHSMImage.header.version  = HSMCLIENT_IPC_EXPORT_VERSION;
-        loadHSMImage.header.msgType  = Hsmclient_ipcExportMsgType_LOAD_HSM;
-        loadHSMImage.header.checksum = 0U;
-        loadHSMImage.imgLoadAddress  = (uint32_t)((uint8_t *)pHSMRt_firmware);
+        gLoadHSMImage.header.version  = HSMCLIENT_IPC_EXPORT_VERSION;
+        gLoadHSMImage.header.msgType  = Hsmclient_ipcExportMsgType_LOAD_HSM;
+        gLoadHSMImage.header.checksum = 0U;
+        gLoadHSMImage.imgLoadAddress  = (uint32_t)((uint8_t *)pHSMRt_firmware);
         /* Compute the checksum: */
-        loadHSMImage.header.checksum = Hsmclient_computeIPCChecksum ((uint8_t*)&loadHSMImage, sizeof(loadHSMImage));
+        gLoadHSMImage.header.checksum = Hsmclient_computeIPCChecksum ((uint8_t*)&gLoadHSMImage, sizeof(gLoadHSMImage));
 
         /* Copy the message: */
-        memcpy ((void *)ptrMessage, (void *)&loadHSMImage, sizeof(Hsmclient_ipcLoadHSM));
+        memcpy ((void *)ptrMessage, (void *)&gLoadHSMImage, sizeof(Hsmclient_ipcLoadHSM));
 
         /* raise interrupt to the processor */
         CSL_FINSR (ptrMSSCtrlRegs->R5SS0_CORE0_MBOX_WRITE_DONE, 24, 24, 1U);
-
-        /* Wait until hsmRt firmware download completes */
-        while(gHsmRtDownloadComplete != 1)
-        {
-            ; /* wait until hsmRt download completes */
-        }
-        orgChecksum = loadHSMResult.header.checksum;
-        loadHSMResult.header.checksum = 0U;
-        /* Compute the checksum: */
-        loadHSMResult.header.checksum = Hsmclient_computeIPCChecksum ((uint8_t*)&loadHSMResult, sizeof(loadHSMResult));
-        /* Check for checksum match and firmware load status signature */
-        if ((loadHSMResult.header.checksum != orgChecksum) || (loadHSMResult.status != Hsmclient_ipcLoadHSMStatus_SUCCESS))
-        {
-            /* Error: Invalid checksum */
-            status = SystemP_FAILURE;
-        }
-
-        HwiP_destruct(&hwiObjReadReq);
-
-        if(status == SystemP_SUCCESS)
-        {
-            /* once loaded hsmrt firmware wait for bootnotify message  */
-            status = HsmClient_waitForBootNotify(NotifyClient, SystemP_WAIT_FOREVER);
-        }
     }
     else
     {
