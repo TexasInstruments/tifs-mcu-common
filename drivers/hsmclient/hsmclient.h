@@ -261,20 +261,14 @@ typedef struct RNGReq_t_
 /**
  * @brief
  * This is the SecureBoot Stream type which holds the data for a specific bootloader
- * to HSM call. This packet is needed by HSM the to do the required operation.
- *
- * @param StreamId		    Index of the streamId. 
- * @param dataIn	        Pointer to the data in shared memory
- * @param dataLen           Size of the data
- * @param canBeEncrypted	Whether this data could be encrypted or not 	
+ * to HSM call. This packet is needed by HSM the to do the required operation.	
  */
 typedef struct SecureBoot_Stream_t_
 {
-    uint32_t  streamId ;            /**< Index of the streamId.*/
     uint8_t*  dataIn ;              /**< Pointer to the data in shared memory.*/
     uint32_t  dataLen ;             /**< Size of the data.*/
-    uint32_t  canBeEncrypted ;      /**< Whether this data could be encrypted or not.*/
-} SecureBoot_Stream_t ;
+    uint8_t  canBeEncrypted ;      /**< Whether this data could be encrypted or not.*/
+} __attribute__((packed)) SecureBoot_Stream_t ;
 
 /**
  * @brief
