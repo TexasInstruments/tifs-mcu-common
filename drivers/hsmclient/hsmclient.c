@@ -63,8 +63,15 @@ void Hsmclient_updateBootNotificationRegister(void);
 /**
  * @brief
  *        Maximum size of the HSM client message queue
+ *        For Streaming Secure Boot, the break up is as follows,
+ *        1 start message (includes the certificate) + 
+ *        1 finish message +
+ *        1 ELF Header Buffer update message + 1 PHT Buffer update message
+ *        1024 ELF segment update messages (including the two note segments)
+ *          - PT note for boot sequence info
+ *          - PT note containing Random string for decryption verification
  */
-#define HSM_CLIENT_MSG_QUEUE_SIZE (1024)
+#define HSM_CLIENT_MSG_QUEUE_SIZE (1028)
 
 /* ========================================================================== */
 /*                            Global Variables                                */
