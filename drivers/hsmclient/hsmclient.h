@@ -700,6 +700,17 @@ int32_t HsmClient_waitForBootNotify(HsmClient_t* HsmClient,uint32_t timeToWaitIn
 int32_t Hsmclient_loadHSMRtFirmware(HsmClient_t *gHSMClient, const uint8_t *pHSMRt_firmware);
 
 /**
+ *  @brief  Loads the HSMRt firmware but does wait for ROM response and boot notification.
+ *          This is typically called by SBL.
+ *
+ * @param pHSMRt_firmware     [IN]  Pointer to signed HSMRt binary
+ *
+ *  @return SystemP_SUCCESS on success, else SystemP_FAILURE
+ *
+ */
+int32_t Hsmclient_loadHSMRtFirmwareNonBlocking(const uint8_t *pHSMRt_firmware);
+
+/**
  *  @brief  Returns the Random Number Generated.
  *
  *  @param  HsmClient            [IN] HsmClient object
