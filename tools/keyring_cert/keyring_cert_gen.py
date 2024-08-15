@@ -4,7 +4,6 @@
 # Python 3.10 script
 
 import sys
-sys.path.insert(0, '../bin2c/')
 import bin2c
 import argparse
 import os
@@ -206,13 +205,21 @@ Returns:
 
     for iter in range(keys_data["num_of_symm_keys"]):
         temp_keys = ''
+        # Populate index of auxiliary symmetric key (Starts from idx = 32)
         temp_keys += (iter + index_start_symm).to_bytes(4,
                                                         byteorder='little').hex()
-        temp_keys += keys_data['keyring_symm'][iter]['key_rights'][::-1]
-        temp_keys += keys_data['keyring_symm'][iter]['key_length'].to_bytes(
+        # Populate key rights of auxiliary symmetric key 
+        key_rights = keys_data['keyring_symm'][iter]['key_rights']
+        # Change key rights to little endian (00 00 00 0A) -> (0A 00 00 00)
+        temp_keys += "".join(map(str.__add__, key_rights[-2::-2] ,key_rights[-1::-2]))
+        # Append key length in bytes
+        temp_keys += int(keys_data['keyring_symm'][iter]['key_length']/8).to_bytes(
             4, byteorder='little').hex()
+        # Append AES KEY
+        # Fill the key with 0s for key sizes 16B and 24B
         temp_keys += utils_hex_from_file(
-            keys_data['keyring_symm'][iter]['aes_key']).zfill(64)
+            keys_data['keyring_symm'][iter]['aes_key']).ljust(64, '0')
+        # Append the key blob with the current key in iteration
         symm_keys += temp_keys
     symm_keys += v_KEYRING_ENC_RS
     # create temp directory for temp files
