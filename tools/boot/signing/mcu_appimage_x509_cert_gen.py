@@ -225,7 +225,7 @@ def get_encrypted_file_iv_rs(bin_file_name, enc_key):
             if(args.kd_salt is not None):
                 isalt = get_key_derivation_salt(args.kd_salt)
                 isalt = bytearray(binascii.unhexlify(isalt))
-                d_key = hkdf(32, enckey, isalt)
+                d_key = hkdf(len(enckey), enckey, isalt)
                 enckey = binascii.hexlify(d_key).decode('utf-8')
             else:
                 enckey = binascii.hexlify(enckey).decode('ascii')
@@ -275,8 +275,8 @@ def get_encrypted_file_iv_rs(bin_file_name, enc_key):
                     f2.write(data_to_encrypt)
 
             # Finally generate the encrypted image from the temp file
-            subprocess.check_output('openssl aes-256-cbc -e -K {} -iv {} -in {} -out {} -nopad'.format(
-                enckey, enc_iv, enctempfile_name, tempfile_name), shell=True)
+            subprocess.check_output('openssl aes-{}-cbc -e -K {} -iv {} -in {} -out {} -nopad'.format(
+                int((len(enckey)*8)/2),  enckey, enc_iv, enctempfile_name, tempfile_name), shell=True)
             
             encrypted_data: bytes = b''
             # copy the encrypted segment data to a buffer 
@@ -315,8 +315,8 @@ def get_encrypted_file_iv_rs(bin_file_name, enc_key):
                 f.write(enc_rs)
 
             # Finally generate the encrypted image
-            subprocess.check_output('openssl aes-256-cbc -e -K {} -iv {} -in {} -out {} -nopad'.format(
-                enckey, enc_iv, tempfile_name, encbin_name), shell=True)
+            subprocess.check_output('openssl aes-{}-cbc -e -K {} -iv {} -in {} -out {} -nopad'.format(
+                int((len(enckey)*8)/2), enckey, enc_iv, tempfile_name, encbin_name), shell=True)
 
             # Delete the tempfile
             os.remove(tempfile_name)
