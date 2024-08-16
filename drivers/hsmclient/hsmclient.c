@@ -1138,21 +1138,13 @@ int32_t HsmClient_procAuthBoot(HsmClient_t* HsmClient,
     /* Change the Arguments Address in Physical Address */
     HsmClient->ReqMsg.args = (void*)(uintptr_t)SOC_virtToPhy(cert);
 
-    status = HsmClient_waitForBootNotify(HsmClient, timeout);
-    if (status == SystemP_SUCCESS)
-    {
-        /*
-            Write back the cert and
-            invalidate the cache before passing it to HSM
-        */
-        CacheP_wbInv(cert, GET_CACHE_ALIGNED_SIZE(cert_size), CacheP_TYPE_ALL);
+    /*
+        Write back the cert and
+        invalidate the cache before passing it to HSM
+    */
+    CacheP_wbInv(cert, GET_CACHE_ALIGNED_SIZE(cert_size), CacheP_TYPE_ALL);
 
-        status = HsmClient_SendAndRecv(HsmClient, timeout);
-    }
-    else 
-    {
-        status = SystemP_FAILURE;
-    }
+    status = HsmClient_SendAndRecv(HsmClient, timeout);
     if(status == SystemP_SUCCESS)
     {
         /* the OpenDbgFirewalls has been populated by HSM server
