@@ -68,7 +68,6 @@ basicConstraints = CA:true
 {EXT_ENC_SEQ}
 {DBG_EXT}
 {KD_EXT}
-{ENC_KEYLOCK}
 
 [ boot_seq ]
 certType     =  INTEGER:{CERT_TYPE}
@@ -132,7 +131,6 @@ subjectKeyIdentifier = none
 {EXT_ENC_SEQ}
 {DBG_EXT}
 {KD_EXT}
-{ENC_KEYLOCK}
 
 [ boot_seq ]
 certType     =  INTEGER:{CERT_TYPE}
@@ -148,11 +146,6 @@ shaValue = FORMAT:HEX,OCT:{SHA_VAL}
 [ swrv ]
 swrv = INTEGER:{SWRV}
 '''
-g_ext_enc_keylock = '''
-[ enc_keylock ]
-keylock         =  INTEGER:{CUST_MEK_KEY_LOCK}
-'''
-
 g_ext_enc_seq = '''
 [ encryption ]
 Iv =FORMAT:HEX,OCT:{ENC_IV}
@@ -195,19 +188,11 @@ def get_cert(args):
             bootCore_id = 16
             certType = 1
             bootCoreOptions = 0
-            if(device == 'am263x'):
-                enc_keylock_ext = ""
-            else:
-                enc_keylock_ext = "1.3.6.1.4.1.294.1.11=ASN1:SEQUENCE:enc_keylock"
-            enc_key_lock = g_enc_unlock_types['UNLOCK']
         else:
             bootAddress = 0
             bootCore_id = 0
             certType = 2
             bootCoreOptions = 0
-            enc_keylock_ext = ""
-            enc_key_lock = g_enc_unlock_types['LOCK']
-
     dbg_seq = ''
     ext_enc_seq = ''
     sbl_enc_seq = ''
@@ -275,11 +260,6 @@ def get_cert(args):
         )
     ret_cert = ""
 
-    if(args.core == 'R5' and device != 'am263x'):
-        ext_enc_keylock = g_ext_enc_keylock.format(
-            CUST_MEK_KEY_LOCK=enc_key_lock,
-        )
-
     openssl_version: str = str(
         subprocess.check_output(f"openssl version", shell=True))
 
@@ -292,7 +272,6 @@ def get_cert(args):
             SWRV=swrev,
             EXT_ENC_SEQ=ext_enc_seq,
             KD_EXT=ext_kd_seq,
-            ENC_KEYLOCK=enc_keylock_ext,
             BOOT_CORE_ID=bootCore_id,
             CERT_TYPE=certType,
             BOOT_CORE_OPTS=bootCoreOptions,
@@ -309,7 +288,6 @@ def get_cert(args):
             SWRV=swrev,
             EXT_ENC_SEQ=ext_enc_seq,
             KD_EXT=ext_kd_seq,
-            ENC_KEYLOCK=enc_keylock_ext,
             BOOT_CORE_ID=bootCore_id,
             CERT_TYPE=certType,
             BOOT_CORE_OPTS=bootCoreOptions,
