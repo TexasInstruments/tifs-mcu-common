@@ -177,7 +177,7 @@ static int32_t HsmClient_EnqueueAndSendMsg(HsmMsg_t message)
         /* Till the boot notify is not received, simply enqueue the message */
 		if (gBootNotificationReceived == SystemP_SUCCESS)
 		{
-			while ((gSecureBootStatus == SystemP_SUCCESS) && gLastSentIndex < gLastEnqueuedIndex)
+			while ((gSecureBootStatus == SystemP_SUCCESS) && (gLastSentIndex < gLastEnqueuedIndex))
 			{
                 /* 
                     Do not wait in case the SIPC software Queue is full and simply abort with error.
@@ -1209,10 +1209,11 @@ int32_t HsmClient_procAuthBootStart(HsmClient_t* HsmClient,
     startMsg.args = (void*)(uintptr_t)SOC_virtToPhy(secureBootInfo);
 
     /*
-       Write back the cert and
-       invalidate the cache before passing it to HSM
+       Write back secure boot info object  and the data it contains 
+       to Shared memory invalidate the caches before passing it to HSM
     */
-    CacheP_wbInv(secureBootInfo, GET_CACHE_ALIGNED_SIZE(sizeof(SecureBoot_Stream_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv(secureBootInfo->dataIn, GET_CACHE_ALIGNED_SIZE(secureBootInfo->dataLen), CacheP_TYPE_ALLD);
+    CacheP_wbInv(secureBootInfo, GET_CACHE_ALIGNED_SIZE(sizeof(SecureBoot_Stream_t)), CacheP_TYPE_ALLD);
 
 	status = HsmClient_EnqueueAndSendMsg(startMsg);
 
@@ -1243,10 +1244,10 @@ int32_t HsmClient_procAuthBootUpdate(HsmClient_t* HsmClient,
     updateMsg.args = (void*)(uintptr_t)SOC_virtToPhy(secureBootInfo);
 
     /*
-       Write back the cert and
-       invalidate the cache before passing it to HSM
+       Write back secure boot info object to Shared memory
+       invalidate the caches before passing it to HSM
     */
-    CacheP_wbInv(secureBootInfo, GET_CACHE_ALIGNED_SIZE(sizeof(SecureBoot_Stream_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv(secureBootInfo, GET_CACHE_ALIGNED_SIZE(sizeof(SecureBoot_Stream_t)), CacheP_TYPE_ALLD);
 
 	status = HsmClient_EnqueueAndSendMsg(updateMsg);
 
@@ -1277,10 +1278,10 @@ int32_t HsmClient_procAuthBootFinish(HsmClient_t* HsmClient,
 	finishMsg.args = (void*)(uintptr_t)SOC_virtToPhy(secureBootInfo);
 
     /*
-       Write back the cert and
-       invalidate the cache before passing it to HSM
+       Write back secure boot info object to Shared memory
+       invalidate the caches before passing it to HSM
     */
-    CacheP_wbInv(secureBootInfo, GET_CACHE_ALIGNED_SIZE(sizeof(SecureBoot_Stream_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv(secureBootInfo, GET_CACHE_ALIGNED_SIZE(sizeof(SecureBoot_Stream_t)), CacheP_TYPE_ALLD);
 
 	status = HsmClient_EnqueueAndSendMsgBlocking(finishMsg);
 
