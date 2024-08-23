@@ -1,7 +1,5 @@
 # Keyring Cert-Gen tool {#TOOLS_KEYRING_CERT_GEN}
 
-\note Support for encryption with symmetric auxiliary keys will be added in future releases.
-
 # Description:
 - This script is used to generate X.509 certificate for keyring.
 - Make sure that python3 and its dependent modules are installed in the host machine.
@@ -20,7 +18,7 @@
     "keyring_sw_rev" : 1,
     "keyring_ver" : 1,
     "num_of_asymm_keys" : 7,
-    "num_of_symm_keys" : 0,
+    "num_of_symm_keys" : 3,
     "keyring_asymm" :  [
                 {
                     "key_rights": "000000AA",
@@ -58,7 +56,23 @@
                     "hash_algo" : "SHA384"
                 }
       ],
-    "keyring_symm" :  []
+      "keyring_symm" :  [
+                {
+                    "key_rights" : "0000000A",
+                    "key_length" : 128,
+                    "aes_key" : "aux_keys/aes128.key" 
+                },
+                {
+                    "key_rights" : "0000000A",
+                    "key_length" : 192,
+                    "aes_key" : "aux_keys/aes192.key" 
+                },
+                {
+                    "key_rights" : "0000000A",
+                    "key_length" : 256,
+                    "aes_key" : "aux_keys/aes256.key" 
+                }
+    ]
 }
 
 \endcode
@@ -73,13 +87,22 @@
 - keyring_cert_gen.py expects 2 mandatory arguments:
     - root_key: certificate is signed using customer MPK and expects path to customer active ROT.
     - keys_info: json file with keyring meta data.
+- Each Symmetric key json object contain 3 fields:
+    - key_rights: Integer value in HEX format which signifies the rights associated with the key.
+        - imageDecrypt (0-3b) - flag to indicate key right for decryption during secure boot.
+        - For example: 0x0000000A represents the key can be used for image decryption during secure boot.
+    - key_length: Length of the key in bits. (Valid values: 128, 192, 256)
+    - aes_key: Location of the symmetric key
+- keyring_cert_gen.py expects 2 mandatory arguments:
+    - root_key: certificate is signed using customer MPK and expects path to customer active ROT.
+    - keys_info: json file with keyring meta data.
 - A dummy json and keyring certificate header file is also availble in ${TIFS_INSTALL_PATH}/tools/keyring_cert for reference.
 - Below are the logs after execution of script
     \code
 keyring version = 1
 keyring software revision = 1
 Number of asymmetric keys = 7
-Number of symmetric keys = 0
+Number of symmetric keys = 3
 
 [ keyring_asymm ]
 asymm_key0=SEQUENCE:comp0
@@ -131,6 +154,13 @@ keyId=INTEGER:38
 key_rights=FORMAT:HEX,OCT:000000AA
 hash_algo=INTEGER:2
 public_key=FORMAT:HEX,OCT:b502e951a5f5ed4bc99191511b530597d3a2d356d0f83887a54253a7ec46fb2c081c7d39391f846932357a57133f8c11
+
+key_blob=FORMAT:HEX,OCT:2c4d77d25fe8b789aab5138acc27dd6f775a5f6bc8fd6c297b80735353da7862018f51d8668c810700ab61bda6c31fbe390b0eb0be1a49b5d4921fd7f795c829e4aeaf1bf82deb7d638f849da445cb5b4a9edbf7b1339a86623002362c7de222b27a234f5b0c7a4c156c5900ea6b66f32d4009d0151007dc17fba76d0e56c1735e54501cb73b1707a3a63b632987b74d3ff7c5a6cb22b930c9be1147992d9939564dfff08dc385f06ae4bae5e29c622f
+inital_vector =  FORMAT:HEX,OCT:28110e15af3a00fed5219a3ba95d8450
+random_string =  FORMAT:HEX,OCT:68819390db88e56c3d4474156da0357b1dc17c04091944991e8357ed62a6d86c
+enc_key_salt  =  FORMAT:HEX,OCT:acca65ded29296fea498ab8a9a15aaa27445ab7c75757c99125254619e4a513b
+enc_key_id    =  INTEGER:0
+decryption_mode =  INTEGER:1
 \endcode
 
 
@@ -138,6 +168,14 @@ public_key=FORMAT:HEX,OCT:b502e951a5f5ed4bc99191511b530597d3a2d356d0f83887a54253
     - 'root_key'     : This is a mandatory parameter which is required to give
                        the key value required to sign the certificate. Key
                        file name with path required.
+    - 'enckey'       : This is an optional parameter which is used only when symmetric 
+                       keyring is being imported via certificate. This parameter expects
+                       path to the root key and will be used in encryption of keyblob.
+    - 'kd_salt'      : This parameter is only used when symmetric key is being imported and
+                       salt will be used for HMAC-based key derivation. 
+    - 'decrypt_mode' : This parameter is optional and specifies the AES mode used for decryption.
+                       There are four supported decryption modes for keyring decryption: 
+                       ECB, CBC, CFB, and CTR.             
     - 'keys_info'    : This is a mandatory parameter which is required to give
                        the json file which contains the keyring data for certificate creation.
     - rsassa_pss     : This is an optional parameter which is used if RSASSA-PSS 
@@ -148,7 +186,7 @@ public_key=FORMAT:HEX,OCT:b502e951a5f5ed4bc99191511b530597d3a2d356d0f83887a54253
 
 ## Example Use -
 \code
-python3 keyring_cert_gen.py  --root_key ../boot/signing/mcu_custMpk.pem --keys_info keys.json
+python3 keyring_cert_gen.py  --root_key ../boot/signing/mcu_custMpk.pem --enckey ../boot/signing/mcu_custMek.key --kd_salt kd_salt.txt --keys_info keys.json
 \endcode
 
 If RSASSA-PSS algorithm for authentication of keyring certificate is required, provide the --rsassa_pss flag and --pss_saltlen **value**. Maximum supported salt length value for RSASSA-PSS is **255**. Please refer to the command below

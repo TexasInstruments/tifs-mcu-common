@@ -39,7 +39,7 @@ decryption_mode: dict[str, int] = {
     "ECB": 0,
     "CBC": 1,
     "CTR": 2,
-    "CFB": 4,
+    "CFB": 8,
 }
 
 g_x509_template = '''
@@ -108,7 +108,8 @@ def pub_pem_to_pub_der(input: str, output: str) -> None:
         output (str): The path to the output file in DER format.
     """
 
-    subprocess.check_output(' openssl pkey -in {} -pubin -outform der -out {}'.format(input, output), shell=True)
+    subprocess.check_output(
+        ' openssl pkey -in {} -pubin -outform der -out {}'.format(input, output), shell=True)
 
 
 def calc_hash(input: str, output: str, hash_algo: str) -> None:
@@ -119,12 +120,15 @@ def calc_hash(input: str, output: str, hash_algo: str) -> None:
         output (str): The path to the output file containing public key hash.
         hash_algo (str): Algorithm used for hash calculation.
     """
-    if(hash_algo == "SHA256"):
-        subprocess.check_output('openssl dgst -sha256 -binary {} > {}'.format(input, output), shell=True)
-    elif(hash_algo == "SHA512"):
-        subprocess.check_output('openssl dgst -sha512 -binary {} > {}'.format(input, output), shell=True)
-    elif(hash_algo == "SHA384"):
-        subprocess.check_output('openssl dgst -sha384 -binary {} > {}'.format(input, output), shell=True)
+    if (hash_algo == "SHA256"):
+        subprocess.check_output(
+            'openssl dgst -sha256 -binary {} > {}'.format(input, output), shell=True)
+    elif (hash_algo == "SHA512"):
+        subprocess.check_output(
+            'openssl dgst -sha512 -binary {} > {}'.format(input, output), shell=True)
+    elif (hash_algo == "SHA384"):
+        subprocess.check_output(
+            'openssl dgst -sha384 -binary {} > {}'.format(input, output), shell=True)
     else:
         print("Invalid hash algorithm")
 
@@ -167,7 +171,7 @@ Returns:
     return hexdata
 
 
-def populate_keyring_ext_symm(keys_data: dict, enc_key) -> None:
+def populate_keyring_ext_symm(keys_data: dict, enc_key: str, aes_decryption_mode: str) -> None:
     """Populates symmetric keyring extension.
 
 Args:
@@ -179,7 +183,7 @@ Returns:
     index_start_symm = 32
     symm_keys = ""
 
-    if((enc_key is None) or (not os.path.exists(enc_key))):
+    if ((enc_key is None) or (not os.path.exists(enc_key))):
         # Error, enc key has to be given
         print("Please give the key to be used for encryption of symmetric keys. It's either missing or file not found!")
         exit(1)
@@ -187,7 +191,7 @@ Returns:
         enckey = None
         with open(enc_key, "rb") as f:
             enckey = f.read()
-            if(args.kd_salt is not None):
+            if (args.kd_salt is not None):
                 isalt = get_key_derivation_salt(args.kd_salt)
                 isalt = bytearray(binascii.unhexlify(isalt))
                 d_key = hkdf(32, enckey, isalt)
@@ -208,10 +212,11 @@ Returns:
         # Populate index of auxiliary symmetric key (Starts from idx = 32)
         temp_keys += (iter + index_start_symm).to_bytes(4,
                                                         byteorder='little').hex()
-        # Populate key rights of auxiliary symmetric key 
+        # Populate key rights of auxiliary symmetric key
         key_rights = keys_data['keyring_symm'][iter]['key_rights']
         # Change key rights to little endian (00 00 00 0A) -> (0A 00 00 00)
-        temp_keys += "".join(map(str.__add__, key_rights[-2::-2] ,key_rights[-1::-2]))
+        temp_keys += "".join(map(str.__add__,
+                             key_rights[-2::-2], key_rights[-1::-2]))
         # Append key length in bytes
         temp_keys += int(keys_data['keyring_symm'][iter]['key_length']/8).to_bytes(
             4, byteorder='little').hex()
@@ -239,8 +244,8 @@ Returns:
         f.write(zeros_pad)
 
     # # Finally generate the encrypted image
-    subprocess.check_output(' openssl aes-256-cbc -e -nopad -K {} -iv {}  -in {} -out {}'.format(
-        enckey, v_KEYRING_ENC_IV, 'tmpdir/'+temp_key_blob, 'tmpdir/'+temp_key_blob+'-enc'), shell=True)
+    subprocess.check_output(' openssl aes-256-{} -e -nopad -K {} -iv {}  -in {} -out {}'.format(aes_decryption_mode,
+                                                                                                enckey, v_KEYRING_ENC_IV, 'tmpdir/'+temp_key_blob, 'tmpdir/'+temp_key_blob+'-enc'), shell=True)
 
     with open('tmpdir/'+temp_key_blob+'-enc', "rb") as f:
         symm_keys = f.read()
@@ -294,7 +299,7 @@ public_key=FORMAT:HEX,OCT:public_key_val
 
 def get_key_derivation_salt(kd_salt_file_name: str) -> str:
     kd_salt = None
-    if(not os.path.exists(kd_salt_file_name)):
+    if (not os.path.exists(kd_salt_file_name)):
         # Error, key derivation salt has to be given
         print("Please give the key derivation salt file name. It's either missing or file not found!")
         exit(1)
@@ -329,7 +334,7 @@ def get_cert(args) -> None:
     v_ROOT_KEY_DERIVE_SALT = '0000'
 
     # populate keyring_version from the dict
-    if(keys_data["keyring_ver"] is None):
+    if (keys_data["keyring_ver"] is None):
         # Default to 1
         keyring_ver = 1
     else:
@@ -341,7 +346,7 @@ def get_cert(args) -> None:
     print('Number of symmetric keys = ' + str(keys_data["num_of_symm_keys"]))
 
     # populate number of asymmetric keys from the dict
-    if(keys_data["num_of_asymm_keys"] == 0):
+    if (keys_data["num_of_asymm_keys"] == 0):
         # Default to 0
         num_of_asymm_keys = 0
         keyring_asymm = ""
@@ -349,7 +354,7 @@ def get_cert(args) -> None:
         num_of_asymm_keys = keys_data["num_of_asymm_keys"]
         keyring_asymm = "1.3.6.1.4.1.294.1.10=ASN1:SEQUENCE:keyring_asymm"
         populate_keyring_ext_asymm(keys_data)
-    if(keys_data["num_of_symm_keys"] == 0):
+    if (keys_data["num_of_symm_keys"] == 0):
         # Default to 0
         num_of_symm_keys = 0
         keyring_symm = ""
@@ -358,7 +363,7 @@ def get_cert(args) -> None:
         num_of_symm_keys = keys_data["num_of_symm_keys"]
         keyring_symm = "1.3.6.1.4.1.294.1.11=ASN1:SEQUENCE:keyring_symm"
         symm_keys, v_KEYRING_ENC_IV, v_KEYRING_ENC_RS = populate_keyring_ext_symm(
-            keys_data, args.enckey)
+            keys_data, args.enckey, aes_decryption_mode)
         if args.kd_salt:
             v_ROOT_KEY_DERIVE_SALT = get_key_derivation_salt(
                 args.kd_salt)
@@ -373,9 +378,9 @@ def get_cert(args) -> None:
         NUM_SYMM=num_of_symm_keys,
         KEY_ID=sign_key_id
     )
-    if(keys_data["num_of_asymm_keys"] > 0):
+    if (keys_data["num_of_asymm_keys"] > 0):
         ret_cert += keyring_ext_asymm_seq
-    if(keys_data["num_of_symm_keys"] > 0):
+    if (keys_data["num_of_symm_keys"] > 0):
         ret_cert += keyring_ext_symm_seq.format(
             SYMM_KEY_BLOB=symm_keys,
             SYMM_KEY_BLOB_ENC_IV=v_KEYRING_ENC_IV,
@@ -394,7 +399,8 @@ if __name__ == "__main__":
     if os.name == 'nt':
         python_exe = 'python'
 
-    BIN2C = f"{python_exe} {os.path.join('..', '..', '..', '..', '..', '..', '..', 'tools', 'bin2c', 'bin2c.py')}"
+    BIN2C = f"{python_exe} {os.path.join(
+        '..', '..', '..', '..', '..', '..', '..', 'tools', 'bin2c', 'bin2c.py')}"
     my_parser = argparse.ArgumentParser(
         description="Creates a Public Key Certificate for (non-K3) HS-SE devices")
 
@@ -408,7 +414,7 @@ if __name__ == "__main__":
                            help='key index of signing certificate')
     my_parser.add_argument('--enc_key_id', required=False, type=int, default=0,
                            help=' properties of key used for encryption of symmetric key blob')
-    my_parser.add_argument('--kd-salt',        type=str,
+    my_parser.add_argument('--kd_salt',        type=str,
                            help='Path to the salt required to calculate derived key from manufacturers encryption key')
     my_parser.add_argument('--rsassa_pss',
                            help='If binary needs to be signed RSASSA PSS scheme or not',  action="store_true")
@@ -442,7 +448,6 @@ if __name__ == "__main__":
     else:
         response = subprocess.check_output('openssl req -new -x509 -key {} -nodes -outform DER -out {} -config {} -{}'.format(
             args.root_key, cert_name, cert_file_name, g_sha_to_use), shell=True)
-    
 
     bin2c.binary_to_header(cert_name, 'keyringCert.h', 'CUST_KEYRINGCERT')
 
