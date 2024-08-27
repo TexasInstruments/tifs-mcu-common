@@ -43,7 +43,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <kernel/dpl/ClockP.h>
-#include <security_common/drivers/crypto/pka/pka.h>
+#include <security_common/drivers/crypto/asym_crypt.h>
 #include <drivers/hw_include/cslr.h>
 #include <drivers/hw_include/cslr_soc.h>
 
@@ -125,12 +125,12 @@
 /**
  * Timeout for ECDSA verify operation - 10ms
  */
-#define PKA_ECDSA_VERIFY_TIMEOUT                   (10000U)
+#define ASYM_CRYPT_ECDSA_VERIFY_TIMEOUT                   (10000U)
 
 /**
  * Timeout for ECDSA sign operation - 10ms
  */
-#define PKA_ECDSA_SIGN_TIMEOUT                     (10000U)
+#define ASYM_CRYPT_ECDSA_SIGN_TIMEOUT                     (10000U)
 
 /** Command to PKA firmware - MODEXP_CRT */
 #define PKA_MODEXP_CRT_CMD   (((uint32_t) 0x0U) << PKA_FUNCTION_CMD_HI_SHIFT) | \
@@ -141,11 +141,11 @@
     (((uint32_t) 0x6U) << PKA_FUNCTION_CMD_LO_SHIFT)
 
 /** Command to PKA firmware - ECDSA SIGN */
-#define PKA_ECDSA_SIGN_CMD   (((uint32_t) 0x2U) << PKA_FUNCTION_CMD_HI_SHIFT) | \
+#define ASYM_CRYPT_ECDSA_SIGN_CMD   (((uint32_t) 0x2U) << PKA_FUNCTION_CMD_HI_SHIFT) | \
     (((uint32_t) 0x2U) << PKA_FUNCTION_CMD_LO_SHIFT)
 
 /** Command to PKA firmware - ECDSA VERIFY */
-#define PKA_ECDSA_VERIFY_CMD   (((uint32_t) 0x2U) << PKA_FUNCTION_CMD_HI_SHIFT) | \
+#define ASYM_CRYPT_ECDSA_VERIFY_CMD   (((uint32_t) 0x2U) << PKA_FUNCTION_CMD_HI_SHIFT) | \
     (((uint32_t) 0x3U) << PKA_FUNCTION_CMD_LO_SHIFT)
 
 /** \brief device type HSSE */
@@ -159,14 +159,15 @@
 /*                 Internal Function Declarations                             */
 /* ========================================================================== */
 
-static PKA_Return_t PKA_loadFirmware(PKA_Attrs *attrs, uint32_t inst);
-static PKA_Return_t PKA_enable(PKA_Attrs *attrs, uint32_t inst);
+static AsymCrypt_Return_t PKA_loadFirmware(PKA_Attrs *attrs, uint32_t inst);
+static AsymCrypt_Return_t PKA_enable(PKA_Attrs *attrs, uint32_t inst);
 static void PKA_disable(PKA_Attrs *attrs);
-static void PKA_cpyz(volatile uint32_t dest[PKA_EC_BIGINT_MAX], uint32_t dest_len, const uint32_t bn[PKA_EC_BIGINT_MAX]);
+
+static void PKA_cpyz(volatile uint32_t dest[ECDSA_MAX_LENGTH], uint32_t dest_len, const uint32_t bn[ECDSA_MAX_LENGTH]);
 static inline uint32_t PKA_dwAlign(uint32_t size);
 static void PKA_delay(int32_t delayCount);
-static uint32_t PKA_bigIntBitLen(const uint32_t bn[PKA_EC_BIGINT_MAX]);
-static PKA_Return_t PKA_isBigIntZero(const uint32_t bn[PKA_BIGINT_MAX]);
+static uint32_t PKA_bigIntBitLen(const uint32_t bn[ECDSA_MAX_LENGTH]);
+static AsymCrypt_Return_t PKA_isBigIntZero(const uint32_t bn[RSA_MAX_LENGTH]);
 static CSL_Eip_29t2_ramRegs* PKA_getBaseAddress(PKA_Attrs *attrs);
 static void PKA_setALength(CSL_Eip_29t2_ramRegs *pka_regs, uint32_t size);
 static void PKA_setBLength(CSL_Eip_29t2_ramRegs *pka_regs, uint32_t size);
@@ -229,16 +230,16 @@ static void PKA_setDPtr(CSL_Eip_29t2_ramRegs *pka_regs, uint32_t offset)
     CSL_REG_WR(&pka_regs->EIP_27B_EIP27_REGISTERS.PKA_DPTR, offset);
 }
 
-PKA_Handle PKA_open(uint32_t index)
+AsymCrypt_Handle AsymCrypt_open(uint32_t index)
 {
-    uint32_t        status  = PKA_RETURN_SUCCESS;
-    PKA_Handle      handle  = NULL;
+    uint32_t        status  = ASYM_CRYPT_RETURN_SUCCESS;
+    AsymCrypt_Handle      handle  = NULL;
     PKA_Config      *config = NULL;
     PKA_Attrs       *attrs  = NULL;
     /* Check instance */
     if(index >= gPkaConfigNum)
     {
-        status = PKA_RETURN_FAILURE;
+        status = ASYM_CRYPT_RETURN_FAILURE;
     }
     else
     {
@@ -248,7 +249,7 @@ PKA_Handle PKA_open(uint32_t index)
         if(TRUE == attrs->isOpen)
         {
             /* Handle is already opened */
-            status = PKA_RETURN_FAILURE;
+            status = ASYM_CRYPT_RETURN_FAILURE;
         }
         else
         {
@@ -265,22 +266,22 @@ PKA_Handle PKA_open(uint32_t index)
         CSL_top_ctrlRegs * ptrTopCtrlRegs = (CSL_top_ctrlRegs *)CSL_TOP_CTRL_U_BASE;
         if(ptrTopCtrlRegs->EFUSE_DEVICE_TYPE == DEVTYPE_HSSE)
         {
-            status = PKA_RETURN_FAILURE;
+            status = ASYM_CRYPT_RETURN_FAILURE;
         }
     #endif
 
-    if(PKA_RETURN_SUCCESS == status)
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {
         attrs->isOpen = TRUE;
-        handle = (PKA_Handle) config;
+        handle = (AsymCrypt_Handle) config;
     }
 
     return (handle);
 }
 
-PKA_Return_t PKA_close(PKA_Handle handle)
+AsymCrypt_Return_t AsymCrypt_close(AsymCrypt_Handle handle)
 {
-    PKA_Return_t status  = PKA_RETURN_FAILURE;
+    AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
     PKA_Config      *config;
     PKA_Attrs *attrs;
     config = (PKA_Config *) handle;
@@ -293,17 +294,17 @@ PKA_Return_t PKA_close(PKA_Handle handle)
         attrs->isOpen = FALSE;
         /* TO disable module*/
         handle = NULL;
-        status  = PKA_RETURN_SUCCESS;
+        status  = ASYM_CRYPT_RETURN_SUCCESS;
     }
     return (status);
 }
 
-PKA_Return_t PKA_RSAPrivate(PKA_Handle handle,
-                    const uint32_t m[PKA_BIGINT_MAX],
-                    const struct PKA_RSAPrivkey *k,
-                    uint32_t result[PKA_BIGINT_MAX])
+AsymCrypt_Return_t AsymCrypt_RSAPrivate(AsymCrypt_Handle handle,
+                    const uint32_t m[RSA_MAX_LENGTH],
+                    const struct AsymCrypt_RSAPrivkey *k,
+                    uint32_t result[RSA_MAX_LENGTH])
 {
-    PKA_Return_t status = PKA_RETURN_FAILURE;
+    AsymCrypt_Return_t status = ASYM_CRYPT_RETURN_FAILURE;
     uint64_t curTimeInUsecs, totalTimeInUsecs = 0;
     uint32_t size, offset, reg, wssize, shift, tmp, numCount;
     CSL_Eip_29t2_ramRegs *pka_regs;
@@ -314,17 +315,17 @@ PKA_Return_t PKA_RSAPrivate(PKA_Handle handle,
     size = k->p[0];
 
     /* check sizes, sizes of s and n must match. */
-    if ((!((size <= 1U) || (size > ((PKA_BIGINT_MAX - 1U) >> 1)) ||
+    if ((!((size <= 1U) || (size > ((RSA_MAX_LENGTH - 1U) >> 1)) ||
            (k->q[0] > size) || (k->dp[0] > size) || (k->dq[0] > size) ||
            (k->coefficient[0] > size) || (m[0] > (size * 2U)))))
     {
         /* Checking handle is opened or not */
         if((attrs->isOpen) && (NULL != handle))
         {
-            status = PKA_RETURN_SUCCESS;
+            status = ASYM_CRYPT_RETURN_SUCCESS;
         }
     }
-    if(PKA_RETURN_SUCCESS == status)
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {
         pka_regs = PKA_getBaseAddress(attrs);
 
@@ -364,9 +365,9 @@ PKA_Return_t PKA_RSAPrivate(PKA_Handle handle,
 
         if(totalTimeInUsecs > PKA_COMPARE_TIMEOUT)
         {
-            status = PKA_RETURN_FAILURE;
+            status = ASYM_CRYPT_RETURN_FAILURE;
         }
-        if(status == PKA_RETURN_SUCCESS)
+        if(status == ASYM_CRYPT_RETURN_SUCCESS)
         {
             reg = CSL_REG_RD(&pka_regs->EIP_27B_EIP27_REGISTERS.PKA_COMPARE);
             if ((reg & PKA_COMPARE_A_LT_B_MASK) != 0U)
@@ -438,10 +439,10 @@ PKA_Return_t PKA_RSAPrivate(PKA_Handle handle,
 
                 if(totalTimeInUsecs > PKA_MODEXP_CRT_TIMEOUT)
                 {
-                    status = PKA_RETURN_FAILURE;
+                    status = ASYM_CRYPT_RETURN_FAILURE;
                 }
 
-                if(status == PKA_RETURN_SUCCESS)
+                if(status == ASYM_CRYPT_RETURN_SUCCESS)
                 {
                     reg = CSL_REG_RD(&pka_regs->EIP_28PX12_GF2_2PRAM_EIP28_REGISTERS.PKA_SEQ_CTRL);
                     if ((reg & PKA_SEQ_CTRL_RESULT_MASK) == (PKA_COMMAND_RESULT_SUCCESS << PKA_SEQ_CTRL_RESULT_SHIFT))
@@ -455,29 +456,29 @@ PKA_Return_t PKA_RSAPrivate(PKA_Handle handle,
                             result[1 + numCount] = pka_regs->EIP_29T2_RAM_PKA_RAM.PKA_RAM[offset + numCount];
                         }
 
-                        status = PKA_RETURN_SUCCESS;
+                        status = ASYM_CRYPT_RETURN_SUCCESS;
                     }
                     else
                     {
-                        status = PKA_RETURN_FAILURE;
+                        status = ASYM_CRYPT_RETURN_FAILURE;
                     }
                 }
             }
             else
             {
-                status = PKA_RETURN_FAILURE;
+                status = ASYM_CRYPT_RETURN_FAILURE;
             }
         }
     }
     return (status);
 }
 
-PKA_Return_t PKA_RSAPublic(PKA_Handle handle,
-                    const uint32_t m[PKA_BIGINT_MAX],
-                    const struct PKA_RSAPubkey *k,
-                    uint32_t result[PKA_BIGINT_MAX])
+AsymCrypt_Return_t AsymCrypt_RSAPublic(AsymCrypt_Handle handle,
+                    const uint32_t m[RSA_MAX_LENGTH],
+                    const struct AsymCrypt_RSAPubkey *k,
+                    uint32_t result[RSA_MAX_LENGTH])
 {
-    PKA_Return_t status = PKA_RETURN_FAILURE;
+    AsymCrypt_Return_t status = ASYM_CRYPT_RETURN_FAILURE;
     uint64_t curTimeInUsecs, totalTimeInUsecs = 0;
     uint32_t size, offset, reg, numCount;
     CSL_Eip_29t2_ramRegs *pka_regs;
@@ -489,16 +490,16 @@ PKA_Return_t PKA_RSAPublic(PKA_Handle handle,
     size = k->n[0];
 
     /* check sizes, sizes of s and n must match. */
-    if ((!((size <= 1U) || (size > (PKA_BIGINT_MAX - 1U)) ||
-           (m[0] != size) || (k->e[0] > (PKA_BIGINT_MAX - 1U)))))
+    if ((!((size <= 1U) || (size > (RSA_MAX_LENGTH - 1U)) ||
+           (m[0] != size) || (k->e[0] > (RSA_MAX_LENGTH - 1U)))))
     {
         /* Checking handle is opened or not */
         if((attrs->isOpen) && (NULL != handle))
         {
-            status = PKA_RETURN_SUCCESS;
+            status = ASYM_CRYPT_RETURN_SUCCESS;
         }
     }
-    if(status == PKA_RETURN_SUCCESS)
+    if(status == ASYM_CRYPT_RETURN_SUCCESS)
     {
         pka_regs = PKA_getBaseAddress(attrs);
 
@@ -548,10 +549,10 @@ PKA_Return_t PKA_RSAPublic(PKA_Handle handle,
 
         if(totalTimeInUsecs > PKA_COMPARE_TIMEOUT)
         {
-            status = PKA_RETURN_FAILURE;
+            status = ASYM_CRYPT_RETURN_FAILURE;
         }
 
-        if (status == PKA_RETURN_SUCCESS)
+        if (status == ASYM_CRYPT_RETURN_SUCCESS)
         {
             reg = CSL_REG_RD(&pka_regs->EIP_27B_EIP27_REGISTERS.PKA_COMPARE);
             if ((reg & PKA_COMPARE_A_LT_B_MASK) != 0U)
@@ -586,10 +587,10 @@ PKA_Return_t PKA_RSAPublic(PKA_Handle handle,
 
                 if(totalTimeInUsecs > PKA_MODEXP_TIMEOUT)
                 {
-                    status = PKA_RETURN_FAILURE;
+                    status = ASYM_CRYPT_RETURN_FAILURE;
                 }
 
-                if (status == PKA_RETURN_SUCCESS)
+                if (status == ASYM_CRYPT_RETURN_SUCCESS)
                 {
                     reg = CSL_REG_RD(&pka_regs->EIP_28PX12_GF2_2PRAM_EIP28_REGISTERS.PKA_SEQ_CTRL);
                     if ((reg & PKA_SEQ_CTRL_RESULT_MASK) ==
@@ -605,31 +606,31 @@ PKA_Return_t PKA_RSAPublic(PKA_Handle handle,
                         {
                             result[1 + numCount] = pka_regs->EIP_29T2_RAM_PKA_RAM.PKA_RAM[offset + numCount];
                         }
-                        status = PKA_RETURN_SUCCESS;
+                        status = ASYM_CRYPT_RETURN_SUCCESS;
                     }
                     else
                     {
-                        status = PKA_RETURN_FAILURE;
+                        status = ASYM_CRYPT_RETURN_FAILURE;
                     }
                 }
             }
             else
             {
-                status = PKA_RETURN_FAILURE;
+                status = ASYM_CRYPT_RETURN_FAILURE;
             }
         }
     }
     return (status);
 }
 
-PKA_Return_t PKA_ECDSASign(PKA_Handle handle,
-                        const struct PKA_ECPrimeCurveP *cp,
-                        const uint32_t priv[PKA_EC_BIGINT_MAX],
-                        const uint32_t k[PKA_EC_BIGINT_MAX],
-                        const uint32_t h[PKA_EC_BIGINT_MAX],
-                        struct PKA_ECDSASig *sig)
+AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp,
+                        const uint32_t priv[ECDSA_MAX_LENGTH],
+                        const uint32_t k[ECDSA_MAX_LENGTH],
+                        const uint32_t h[ECDSA_MAX_LENGTH],
+                        struct AsymCrypt_ECDSASig *sig)
 {
-    PKA_Return_t status = PKA_RETURN_FAILURE;
+    AsymCrypt_Return_t status = ASYM_CRYPT_RETURN_FAILURE;
     uint64_t curTimeInUsecs, totalTimeInUsecs = 0;
     uint32_t offset, reg, size, numCount;
     uint32_t bn_one[2] = { 1U, 1U };
@@ -642,7 +643,7 @@ PKA_Return_t PKA_ECDSASign(PKA_Handle handle,
     size = cp->prime[0];
 
     /* check sizes */
-    if ((!((size <= 2U) || (size > (PKA_EC_BIGINT_MAX - 1U)) ||
+    if ((!((size <= 2U) || (size > (ECDSA_MAX_LENGTH - 1U)) ||
            (size != cp->order[0]) || (size < cp->a[0]) ||
            (size < cp->b[0]) || (size < cp->g.x[0]) ||
            (size < cp->g.y[0]) || (size < priv[0]) ||
@@ -652,10 +653,10 @@ PKA_Return_t PKA_ECDSASign(PKA_Handle handle,
         /* Checking handle is opened or not */
         if((attrs->isOpen) && (NULL != handle))
         {
-            status = PKA_RETURN_SUCCESS;
+            status = ASYM_CRYPT_RETURN_SUCCESS;
         }
     }
-    if(status == PKA_RETURN_SUCCESS)
+    if(status == ASYM_CRYPT_RETURN_SUCCESS)
     {
         pka_regs = PKA_getBaseAddress(attrs);
 
@@ -698,7 +699,7 @@ PKA_Return_t PKA_ECDSASign(PKA_Handle handle,
         PKA_setDPtr(pka_regs, offset);
         PKA_cpyz(&pka_regs->EIP_29T2_RAM_PKA_RAM.PKA_RAM[offset], size + 2U, k);
 
-        CSL_REG_WR(&pka_regs->EIP_27B_EIP27_REGISTERS.PKA_FUNCTION, PKA_ECDSA_SIGN_CMD | (((uint32_t) 1U) << PKA_FUNCTION_RUN_SHIFT));
+        CSL_REG_WR(&pka_regs->EIP_27B_EIP27_REGISTERS.PKA_FUNCTION, ASYM_CRYPT_ECDSA_SIGN_CMD | (((uint32_t) 1U) << PKA_FUNCTION_RUN_SHIFT));
 
         /* Wait for completion */
         curTimeInUsecs = ClockP_getTimeUsec();
@@ -710,12 +711,12 @@ PKA_Return_t PKA_ECDSASign(PKA_Handle handle,
 
         totalTimeInUsecs = 0;
 
-        if(totalTimeInUsecs > PKA_ECDSA_SIGN_TIMEOUT)
+        if(totalTimeInUsecs > ASYM_CRYPT_ECDSA_SIGN_TIMEOUT)
         {
-            status = PKA_RETURN_FAILURE;
+            status = ASYM_CRYPT_RETURN_FAILURE;
         }
 
-        if(status == PKA_RETURN_SUCCESS)
+        if(status == ASYM_CRYPT_RETURN_SUCCESS)
         {
             reg = CSL_REG_RD(&pka_regs->EIP_28PX12_GF2_2PRAM_EIP28_REGISTERS.PKA_SEQ_CTRL);
             if((reg & PKA_SEQ_CTRL_RESULT_MASK) == (PKA_COMMAND_RESULT_SUCCESS << PKA_SEQ_CTRL_RESULT_SHIFT))
@@ -731,24 +732,24 @@ PKA_Return_t PKA_ECDSASign(PKA_Handle handle,
                 {
                     sig->s[1 + numCount] = pka_regs->EIP_29T2_RAM_PKA_RAM.PKA_RAM[offset + numCount];
                 }
-                status = PKA_RETURN_SUCCESS;
+                status = ASYM_CRYPT_RETURN_SUCCESS;
             }
             else
             {
-                status = PKA_RETURN_FAILURE;
+                status = ASYM_CRYPT_RETURN_FAILURE;
             }
         }
     }
     return (status);
 }
 
-PKA_Return_t PKA_ECDSAVerify(PKA_Handle handle,
-                        const struct PKA_ECPrimeCurveP *cp,
-                        const struct PKA_ECPoint *pub,
-                        const struct PKA_ECDSASig *sig,
-                        const uint32_t h[PKA_EC_BIGINT_MAX])
+AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp,
+                        const struct AsymCrypt_ECPoint *pub,
+                        const struct AsymCrypt_ECDSASig *sig,
+                        const uint32_t h[ECDSA_MAX_LENGTH])
 {
-    PKA_Return_t status = PKA_RETURN_FAILURE;
+    AsymCrypt_Return_t status = ASYM_CRYPT_RETURN_FAILURE;
     uint64_t curTimeInUsecs, totalTimeInUsecs = 0;
     uint32_t offset, reg, size;
     uint32_t bn_one[2] = { 1U, 1U };
@@ -761,7 +762,7 @@ PKA_Return_t PKA_ECDSAVerify(PKA_Handle handle,
     size = cp->prime[0];
 
     /* check sizes */
-    if ((!((size <= 2U) || (size > (PKA_EC_BIGINT_MAX - 1U)) ||
+    if ((!((size <= 2U) || (size > (ECDSA_MAX_LENGTH - 1U)) ||
            (size != cp->order[0]) || (size < cp->a[0]) ||
            (size < cp->b[0]) || (size < cp->g.x[0]) ||
            (size < cp->g.y[0]) || (size < pub->x[0]) ||
@@ -773,9 +774,9 @@ PKA_Return_t PKA_ECDSAVerify(PKA_Handle handle,
         /* Checking handle is opened or not */
         if((attrs->isOpen) && (NULL != handle))
         {
-            status = PKA_RETURN_SUCCESS;
+            status = ASYM_CRYPT_RETURN_SUCCESS;
         }
-        if(status == PKA_RETURN_SUCCESS)
+        if(status == ASYM_CRYPT_RETURN_SUCCESS)
         {
             pka_regs = PKA_getBaseAddress(attrs);
 
@@ -828,7 +829,7 @@ PKA_Return_t PKA_ECDSAVerify(PKA_Handle handle,
 
             PKA_cpyz(&pka_regs->EIP_29T2_RAM_PKA_RAM.PKA_RAM[offset], size + 2U, sig->s);
 
-            CSL_REG_WR(&pka_regs->EIP_27B_EIP27_REGISTERS.PKA_FUNCTION, PKA_ECDSA_VERIFY_CMD | (((uint32_t) 1U) << PKA_FUNCTION_RUN_SHIFT));
+            CSL_REG_WR(&pka_regs->EIP_27B_EIP27_REGISTERS.PKA_FUNCTION, ASYM_CRYPT_ECDSA_VERIFY_CMD | (((uint32_t) 1U) << PKA_FUNCTION_RUN_SHIFT));
 
             /* Wait for completion */
             curTimeInUsecs = ClockP_getTimeUsec();
@@ -840,20 +841,20 @@ PKA_Return_t PKA_ECDSAVerify(PKA_Handle handle,
 
             totalTimeInUsecs = 0;
 
-            if(totalTimeInUsecs > PKA_ECDSA_VERIFY_TIMEOUT)
+            if(totalTimeInUsecs > ASYM_CRYPT_ECDSA_VERIFY_TIMEOUT)
             {
-                status = PKA_RETURN_FAILURE;
+                status = ASYM_CRYPT_RETURN_FAILURE;
             }
             else
             {
                 reg = CSL_REG_RD(&pka_regs->EIP_28PX12_GF2_2PRAM_EIP28_REGISTERS.PKA_SEQ_CTRL);
                 if((reg & PKA_SEQ_CTRL_RESULT_MASK) == (PKA_COMMAND_RESULT_SUCCESS << PKA_SEQ_CTRL_RESULT_SHIFT))
                 {
-                    status = PKA_RETURN_SUCCESS;
+                    status = ASYM_CRYPT_RETURN_SUCCESS;
                 }
                 else
                 {
-                    status = PKA_RETURN_FAILURE;
+                    status = ASYM_CRYPT_RETURN_FAILURE;
                 }
             }
         }
@@ -861,9 +862,9 @@ PKA_Return_t PKA_ECDSAVerify(PKA_Handle handle,
     return (status);
 }
 
-static PKA_Return_t PKA_enable(PKA_Attrs *attrs, uint32_t inst)
+static AsymCrypt_Return_t PKA_enable(PKA_Attrs *attrs, uint32_t inst)
 {
-    PKA_Return_t status = PKA_RETURN_SUCCESS;
+    AsymCrypt_Return_t status = ASYM_CRYPT_RETURN_SUCCESS;
     uint32_t reg;
     uint64_t curTimeInUsecs, totalTimeInUsecs = 0;
 
@@ -897,10 +898,10 @@ static PKA_Return_t PKA_enable(PKA_Attrs *attrs, uint32_t inst)
 
     if(totalTimeInUsecs > PKA_REG_TIMEOUT)
     {
-        status = PKA_RETURN_FAILURE;
+        status = ASYM_CRYPT_RETURN_FAILURE;
     }
 #endif
-    if(PKA_RETURN_SUCCESS == status)
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {
         CSL_REG_WR(&pka_regs->EIP_29T2_RAM_HOST_REGISTERS.PKA_CLK_CTRL,
             (((uint32_t) 1U) << PKA_CLK_CTRL_REG_CLK_ON_SHIFT) |
@@ -932,14 +933,14 @@ static PKA_Return_t PKA_enable(PKA_Attrs *attrs, uint32_t inst)
 
         if(totalTimeInUsecs > PKA_REG_TIMEOUT)
         {
-            status = PKA_RETURN_FAILURE;
+            status = ASYM_CRYPT_RETURN_FAILURE;
         }
     }
-    if(PKA_RETURN_SUCCESS == status)
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {
         status = PKA_loadFirmware(attrs, inst);
     }
-    if(PKA_RETURN_SUCCESS != status)
+    if(ASYM_CRYPT_RETURN_SUCCESS != status)
     {
         PKA_disable(attrs);
         /*
@@ -966,17 +967,17 @@ static PKA_Return_t PKA_enable(PKA_Attrs *attrs, uint32_t inst)
 
         if(totalTimeInUsecs > PKA_REG_TIMEOUT)
         {
-            status = PKA_RETURN_FAILURE;
+            status = ASYM_CRYPT_RETURN_FAILURE;
         }
     }
 
     return (status);
 }
 
-static PKA_Return_t PKA_loadFirmware(PKA_Attrs *attrs, uint32_t inst)
+static AsymCrypt_Return_t PKA_loadFirmware(PKA_Attrs *attrs, uint32_t inst)
 {
     volatile int32_t i;
-    PKA_Return_t status = PKA_RETURN_FAILURE;
+    AsymCrypt_Return_t status = ASYM_CRYPT_RETURN_FAILURE;
 
     CSL_Eip_29t2_ramRegs *pka_regs = PKA_getBaseAddress(attrs);
 
@@ -1031,7 +1032,7 @@ static PKA_Return_t PKA_loadFirmware(PKA_Attrs *attrs, uint32_t inst)
                  **/
                 if ((CSL_REG_RD(&pka_regs->EIP_28PX12_GF2_2PRAM_EIP28_REGISTERS.PKA_SW_REV) & PKA_SW_REV_FIRMWARE_VERSION_MASK) == (EIP29T2_FW_VERSION << PKA_SW_REV_FIRMWARE_VERSION_SHIFT))
                 {
-                    status = PKA_RETURN_SUCCESS;
+                    status = ASYM_CRYPT_RETURN_SUCCESS;
                 }
             }
         }
@@ -1098,8 +1099,8 @@ static void PKA_delay(int32_t delayCount)
  * \param dest_len Length of the destination buffer
  * \param bn Bigint to copy from
  */
-static void PKA_cpyz(volatile uint32_t dest[PKA_EC_BIGINT_MAX],
-               uint32_t dest_len, const uint32_t bn[PKA_EC_BIGINT_MAX])
+static void PKA_cpyz(volatile uint32_t dest[ECDSA_MAX_LENGTH],
+               uint32_t dest_len, const uint32_t bn[ECDSA_MAX_LENGTH])
 {
     uint32_t i;
 
@@ -1142,7 +1143,7 @@ uint32_t PKA_countLeadingZeros(uint32_t x)
  *
  * \return Length in bits of the big number
  */
-static uint32_t PKA_bigIntBitLen(const uint32_t bn[PKA_EC_BIGINT_MAX])
+static uint32_t PKA_bigIntBitLen(const uint32_t bn[ECDSA_MAX_LENGTH])
 {
     uint32_t i, status;
 
@@ -1169,18 +1170,18 @@ static uint32_t PKA_bigIntBitLen(const uint32_t bn[PKA_EC_BIGINT_MAX])
  *
  * \param bn Input number
  *
- * \return PKA_RETURN_SUCCESS if the number if zero
+ * \return ASYM_CRYPT_RETURN_SUCCESS if the number if zero
  */
-static PKA_Return_t PKA_isBigIntZero(const uint32_t bn[PKA_BIGINT_MAX])
+static AsymCrypt_Return_t PKA_isBigIntZero(const uint32_t bn[RSA_MAX_LENGTH])
 {
     uint32_t i;
-    PKA_Return_t ret = PKA_RETURN_SUCCESS;
+    AsymCrypt_Return_t ret = ASYM_CRYPT_RETURN_SUCCESS;
 
     for (i = 0U; i <= bn[0]; i++)
     {
         if (bn[i] != 0U)
         {
-            ret = PKA_RETURN_FAILURE;
+            ret = ASYM_CRYPT_RETURN_FAILURE;
             break;
         }
     }

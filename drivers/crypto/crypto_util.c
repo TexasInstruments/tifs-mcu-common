@@ -33,7 +33,7 @@
 /**
  *  \file   pka_util.c
  *
- *  \brief  This file contains the utility functions of PKA driver
+ *  \brief  This file contains the utility functions of AsymCrypt driver
  */
 
 /* ========================================================================== */
