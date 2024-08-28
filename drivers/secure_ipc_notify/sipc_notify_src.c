@@ -113,7 +113,7 @@ static inline void SIPC_setMboxConfig(SIPC_Params *params, uint32_t selfCoreId)
         pMailboxConfig->swQ->rdIdx = 0 ;
         pMailboxConfig->swQ->EleSize = params->ipcQueue_eleSize_inBytes;
         pMailboxConfig->swQ->Qlength = params->ipcQueue_length ;
-        pMailboxConfig->swQ->Qfifo = (uint8_t*)((uint32_t)SOC_virtToPhy((void *)params->tx_SipcQueues[CORE_INDEX_HSM]));
+        pMailboxConfig->swQ->Qfifo = (uint8_t*)((uint32_t)SOC_virtToPhy((void *)params->rx_SipcQueues[CORE_INDEX_HSM]));
     }
 }
 
