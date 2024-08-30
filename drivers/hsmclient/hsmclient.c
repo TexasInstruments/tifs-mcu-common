@@ -1320,9 +1320,10 @@ int32_t HsmClient_setFirewall(HsmClient_t* HsmClient,
     HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *) FirewallReqObj, sizeof(FirewallReq_t));
 
     /*
-       Write back the FirewallReq_t struct
+       Write back the FirewallReqObj and FirewallRegionArr
     */
     CacheP_wbInv((void*)FirewallReqObj, GET_CACHE_ALIGNED_SIZE(sizeof(FirewallReq_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv((void*)FirewallReqObj->FirewallRegionArr, GET_CACHE_ALIGNED_SIZE(sizeof(FirewallRegionReq_t)), CacheP_TYPE_ALL);
 
     status = HsmClient_SendAndRecv(HsmClient, timeout);
     if(status == SystemP_SUCCESS)
@@ -1338,6 +1339,8 @@ int32_t HsmClient_setFirewall(HsmClient_t* HsmClient,
         {
             /* Change the Arguments Address in Physical Address */
             HsmClient->RespMsg.args = (void*)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
+            
+            CacheP_inv((void*) HsmClient->RespMsg.args, GET_CACHE_ALIGNED_SIZE(sizeof(FirewallReq_t)), CacheP_TYPE_ALL);
 
             /* check the integrity of args */
             crcArgs = crc16_ccit((uint8_t*)HsmClient->RespMsg.args, sizeof(FirewallReq_t));
@@ -1404,6 +1407,8 @@ int32_t HsmClient_FirewallIntr(HsmClient_t* HsmClient,
         {
             /* Change the Arguments Address in Physical Address */
             HsmClient->RespMsg.args = (void*)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
+
+            CacheP_inv((void*) HsmClient->RespMsg.args, GET_CACHE_ALIGNED_SIZE(sizeof(FirewallIntrReq_t)), CacheP_TYPE_ALL);
 
             /* check the integrity of args */
             crcArgs = crc16_ccit((uint8_t*)HsmClient->RespMsg.args, sizeof(FirewallIntrReq_t));
