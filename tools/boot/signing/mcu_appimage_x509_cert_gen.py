@@ -274,10 +274,13 @@ def get_encrypted_file_iv_rs(bin_file_name, enc_key):
                     # to the file intended to be encrypted 
                     f2.write(data_to_encrypt)
 
-            # Finally generate the encrypted image from the temp file
-            subprocess.check_output('openssl aes-{}-cbc -e -K {} -iv {} -in {} -out {} -nopad'.format(
-                int((len(enckey)*8)/2),  enckey, enc_iv, enctempfile_name, tempfile_name), shell=True)
-            
+            if (len(data_to_encrypt) % 16 == 0):
+                # Finally generate the encrypted image from the temp file
+                subprocess.check_output('openssl aes-{}-cbc -e -K {} -iv {} -in {} -out {} -nopad'.format(
+                    int((len(enckey)*8)/2),  enckey, enc_iv, enctempfile_name, tempfile_name), shell=True)
+            else:
+                print("ERROR: The size of the input binary blob must be a multiple of 16 for successful encryption.")
+
             encrypted_data: bytes = b''
             # copy the encrypted segment data to a buffer 
             with open(tempfile_name, 'r+b') as f:
