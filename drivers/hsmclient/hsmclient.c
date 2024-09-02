@@ -313,6 +313,11 @@ static int32_t HsmClient_SendAndRecv(HsmClient_t * HsmClient,uint32_t timeout)
         }
         else
         {
+            /*
+            Write back the RespMsg and
+            invalidate the cache before calculating crc
+            */
+            CacheP_wbInv((void*) &HsmClient->RespMsg, GET_CACHE_ALIGNED_SIZE(sizeof(HsmMsg_t)), CacheP_TYPE_ALL);
             crcMsg = crc16_ccit((uint8_t*)&HsmClient->RespMsg,SIPC_MSG_SIZE - 2);
             /* if the message is okay then send whatever the flag receive */
             if(crcMsg == HsmClient->RespMsg.crcMsg)
