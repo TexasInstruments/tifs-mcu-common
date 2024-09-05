@@ -64,6 +64,8 @@
 
 #if defined(SOC_F29H85X) || defined (SOC_AM261X)
 #include <security_common/drivers/crypto/pke/hw_include/pke_hw/inc/pke.h>
+#include <security_common/drivers/crypto/pke/hw_include/pke_hw/src/pke4_driver.h>
+#include <security_common/drivers/crypto/pke/hw_include/pke_hw/inc/pke_dpasl.h>
 #endif
 
 #ifdef __cplusplus
