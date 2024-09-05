@@ -313,11 +313,6 @@ static int32_t HsmClient_SendAndRecv(HsmClient_t * HsmClient,uint32_t timeout)
         }
         else
         {
-            /*
-            Write back the RespMsg and
-            invalidate the cache before calculating crc
-            */
-            CacheP_wbInv((void*) &HsmClient->RespMsg, GET_CACHE_ALIGNED_SIZE(sizeof(HsmMsg_t)), CacheP_TYPE_ALL);
             crcMsg = crc16_ccit((uint8_t*)&HsmClient->RespMsg,SIPC_MSG_SIZE - 2);
             /* if the message is okay then send whatever the flag receive */
             if(crcMsg == HsmClient->RespMsg.crcMsg)
@@ -1317,7 +1312,7 @@ int32_t HsmClient_setFirewall(HsmClient_t* HsmClient,
     HsmClient->ReqMsg.args = (void*)(uintptr_t)SOC_virtToPhy(FirewallReqObj);
 
     /* Calculates CRC of the array containing firewall regions to be configured */
-    crcFirewallRegionArr = crc16_ccit((uint8_t*) FirewallReqObj->FirewallRegionArr, (FirewallReqObj->regionCount)*sizeof(FirewallRegionReq_t));
+    crcFirewallRegionArr = crc16_ccit((uint8_t*) FirewallReqObj->FirewallRegionArr, ((FirewallReqObj->regionCount) * sizeof(FirewallRegionReq_t)));
     FirewallReqObj->crcArr = crcFirewallRegionArr;
     FirewallReqObj->FirewallRegionArr = (FirewallRegionReq_t*)(uintptr_t) SOC_virtToPhy(FirewallReqObj->FirewallRegionArr);
 
@@ -1327,9 +1322,9 @@ int32_t HsmClient_setFirewall(HsmClient_t* HsmClient,
     /*
        Write back the FirewallReqObj and FirewallRegionArr
     */
-    CacheP_wbInv((void*)FirewallReqObj, GET_CACHE_ALIGNED_SIZE(sizeof(FirewallReq_t)), CacheP_TYPE_ALL);
-    CacheP_wbInv((void*)FirewallReqObj->FirewallRegionArr, GET_CACHE_ALIGNED_SIZE(sizeof(FirewallRegionReq_t)), CacheP_TYPE_ALL);
-
+    CacheP_wbInv((void*) FirewallReqObj, GET_CACHE_ALIGNED_SIZE(sizeof(FirewallReq_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv((void*) FirewallReqObj->FirewallRegionArr, GET_CACHE_ALIGNED_SIZE(((FirewallReqObj->regionCount) * sizeof(FirewallRegionReq_t))), CacheP_TYPE_ALL);
+    
     status = HsmClient_SendAndRecv(HsmClient, timeout);
     if(status == SystemP_SUCCESS)
     {
