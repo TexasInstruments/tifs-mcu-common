@@ -1769,6 +1769,8 @@ int32_t HsmClient_getRandomNum(HsmClient_t* HsmClient,
        invalidate the cache before passing it to HSM
     */
     CacheP_wbInv(getRandomNum, GET_CACHE_ALIGNED_SIZE(sizeof(RNGReq_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv(getRandomNum->seedValue, GET_CACHE_ALIGNED_SIZE((getRandomNum->seedSizeInDWords)*4), CacheP_TYPE_ALL);
+    CacheP_wbInv(getRandomNum->resultLengthPtr , GET_CACHE_ALIGNED_SIZE(sizeof(uint32_t)), CacheP_TYPE_ALL);
 
     status = HsmClient_SendAndRecv(HsmClient, timeout);
     if(status == SystemP_SUCCESS)
@@ -1786,6 +1788,8 @@ int32_t HsmClient_getRandomNum(HsmClient_t* HsmClient,
             /* Change the Arguments Address in Physical Address */
             HsmClient->RespMsg.args = (void*)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
 
+            CacheP_inv((void*) HsmClient->RespMsg.args, GET_CACHE_ALIGNED_SIZE(sizeof(RNGReq_t)), CacheP_TYPE_ALL);
+            CacheP_inv((void*) ((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr, GET_CACHE_ALIGNED_SIZE(((uint32_t)*(((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr))), CacheP_TYPE_ALL);
             /* check the integrity of args */
             crcArgs = crc16_ccit((uint8_t*)HsmClient->RespMsg.args, sizeof(RNGReq_t));
             if(crcArgs == HsmClient->RespMsg.crcArgs)
