@@ -36,6 +36,7 @@ g_dbg_types = {
 g_core_types = {
     "R5": '0',
     "HSM": '1',
+    "C29": '2',
 }
 
 g_enc_unlock_types = {
@@ -63,8 +64,8 @@ emailAddress           = Albert@gt.ti.com
 [ v3_ca ]
 basicConstraints = CA:true
 1.3.6.1.4.1.294.1.1=ASN1:SEQUENCE:boot_seq
-1.3.6.1.4.1.294.1.2=ASN1:SEQUENCE:image_integrity
 1.3.6.1.4.1.294.1.3=ASN1:SEQUENCE:swrv
+{IMG_INT_SEQ}
 {EXT_ENC_SEQ}
 {DBG_EXT}
 {KD_EXT}
@@ -76,12 +77,14 @@ bootCoreOpts =  INTEGER:{BOOT_CORE_OPTS}
 destAddr     =  FORMAT:HEX,OCT:{BOOT_ADDR}
 imageSize    =  INTEGER:{IMAGE_LENGTH}
 
+[ swrv ]
+swrv = INTEGER:{SWRV}
+'''
+
+g_img_integ_seq = '''
 [ image_integrity ]
 shaType = OID:{SHA_OID}
 shaValue = FORMAT:HEX,OCT:{SHA_VAL}
-
-[ swrv ]
-swrv = INTEGER:{SWRV}
 '''
 
 g_ext_enc_seq = '''
@@ -126,8 +129,8 @@ emailAddress           = Albert@gt.ti.com
 basicConstraints = CA:true
 subjectKeyIdentifier = none
 1.3.6.1.4.1.294.1.1=ASN1:SEQUENCE:boot_seq
-1.3.6.1.4.1.294.1.2=ASN1:SEQUENCE:image_integrity
 1.3.6.1.4.1.294.1.3=ASN1:SEQUENCE:swrv
+{IMG_INT_SEQ}
 {EXT_ENC_SEQ}
 {DBG_EXT}
 {KD_EXT}
@@ -139,13 +142,15 @@ bootCoreOpts =  INTEGER:{BOOT_CORE_OPTS}
 destAddr     =  FORMAT:HEX,OCT:{BOOT_ADDR}
 imageSize    =  INTEGER:{IMAGE_LENGTH}
 
-[ image_integrity ]
-shaType = OID:{SHA_OID}
-shaValue = FORMAT:HEX,OCT:{SHA_VAL}
-
 [ swrv ]
 swrv = INTEGER:{SWRV}
 '''
+g_img_integ_seq = '''
+[ image_integrity ]
+shaType = OID:{SHA_OID}
+shaValue = FORMAT:HEX,OCT:{SHA_VAL}
+'''
+
 g_ext_enc_seq = '''
 [ encryption ]
 Iv =FORMAT:HEX,OCT:{ENC_IV}
@@ -188,12 +193,18 @@ def get_cert(args):
             bootCore_id = 16
             certType = 1
             bootCoreOptions = 0
+        elif(args.core == 'C29'):
+            bootAddress = 0
+            bootCore_id = 16
+            certType = 1
+            bootCoreOptions = 0
         else:
             bootAddress = 0
             bootCore_id = 0
             certType = 2
             bootCoreOptions = 0
     dbg_seq = ''
+    ext_integ_seq = ''
     ext_enc_seq = ''
     sbl_enc_seq = ''
     ext_kd_seq = ''
@@ -220,6 +231,8 @@ def get_cert(args):
         else:
             enc_iter_count = 0
             enc_salt = '0000'
+    if ((args.img_integ.lower()) == 'yes'):
+        ext_integ_seq = "1.3.6.1.4.1.294.1.2=ASN1:SEQUENCE:image_integrity"
 
     if args.sbl_enc:
         # SBL encryption is enabled
@@ -267,8 +280,8 @@ def get_cert(args):
         print(
             f"WARNING: OpenSSL version {openssl_version.split()[1]} found is not recommended due to EOL. Please install version 3.x .")
         ret_cert = g_openssl111_x509_template.format(
+            IMG_INT_SEQ=ext_integ_seq,
             DBG_EXT=dbg_seq,
-            SHA_OID=g_sha_oids[g_sha_to_use],
             SWRV=swrev,
             EXT_ENC_SEQ=ext_enc_seq,
             KD_EXT=ext_kd_seq,
@@ -277,14 +290,13 @@ def get_cert(args):
             BOOT_CORE_OPTS=bootCoreOptions,
             BOOT_ADDR='{:08X}'.format(int(args.loadaddr, 16)),
             IMAGE_LENGTH=os.path.getsize(image_bin_name),
-            SHA_VAL=get_sha_val(image_bin_name, g_sha_to_use),
         )
 
     elif "3." in openssl_version:
         print(f"INFO: OpenSSL version {openssl_version.split()[1]} found.")
         ret_cert = g_openssl3_x509_template.format(
+            IMG_INT_SEQ=ext_integ_seq,
             DBG_EXT=dbg_seq,
-            SHA_OID=g_sha_oids[g_sha_to_use],
             SWRV=swrev,
             EXT_ENC_SEQ=ext_enc_seq,
             KD_EXT=ext_kd_seq,
@@ -293,7 +305,6 @@ def get_cert(args):
             BOOT_CORE_OPTS=bootCoreOptions,
             BOOT_ADDR='{:08X}'.format(int(args.loadaddr, 16)),
             IMAGE_LENGTH=os.path.getsize(image_bin_name),
-            SHA_VAL=get_sha_val(image_bin_name, g_sha_to_use),
         )
     else:
         print(
@@ -316,6 +327,13 @@ def get_cert(args):
             DBG_DEVICE='00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000',
             DBG_TYPE=g_dbg_types[args.debug],
         )
+        
+    if(ext_integ_seq != ''):
+        ret_cert += g_img_integ_seq.format(
+            SHA_OID=g_sha_oids[g_sha_to_use],
+            SHA_VAL=get_sha_val(image_bin_name, g_sha_to_use),
+        )
+    
     return dedent(ret_cert)
 
 
@@ -393,7 +411,7 @@ my_parser = argparse.ArgumentParser(
 my_parser.add_argument('--image-bin',   type=str,
                        required=True, help='Path to the SBL/hsmRT binary')
 my_parser.add_argument('--core',        type=str,
-                       help='R5/HSM are the options to build for specific core')
+                       help='R5/C29/HSM are the options to build for specific core')
 my_parser.add_argument('--sbl-enc',     action='store_true',
                        required=False, help='Encrypt SBL or not')
 my_parser.add_argument('--tifs-enc',    action='store_true',
@@ -414,6 +432,10 @@ my_parser.add_argument('--debug',       type=str,
                        help='Debug options for the image')
 my_parser.add_argument('--device',       type=str,
                        help='SOC name', default='am263px')
+my_parser.add_argument('--boot',       type=str,
+                       help='SOC boot mode', default='RAM')
+my_parser.add_argument('--img_integ',       type=str,
+                       help='Image integrity extension', default='yes')
 
 args = my_parser.parse_args()
 
@@ -424,7 +446,10 @@ cert_file_name = "temp_cert"+str(randint(111, 999))
 with open(cert_file_name, "w+") as f:
     f.write(cert_str)
 
-cert_name = "cert"+str(randint(111, 999))
+if(args.device == 'f29h85x'):
+    cert_name = "C29-cert-pad.bin"
+else:
+    cert_name = "cert"+str(randint(111, 999))
 
 out_name = args.out_image
 
@@ -445,9 +470,16 @@ if args.sbl_enc or args.tifs_enc:
 else:
     bin_fh = open(args.image_bin, 'rb')
 
-shutil.copyfileobj(cert_fh, final_fh)
-shutil.copyfileobj(bin_fh, final_fh)
-
+# BOOTROM expects certificate size to be 4 KB for HSM RAM/FLASH boot and C29 FLASH boot  
+if(((args.device == 'f29h85x') and (args.core == 'HSM')) or ((args.device == 'f29h85x') and (args.core == 'C29') and (args.boot == 'FLASH'))):
+    cert_size = os.path.getsize(cert_name)
+    cert_data = cert_fh.read()
+    temp_cert = cert_data + (b'\x00' * (4096 - cert_size))  # Pad certificate with 0 if size less than 4 KB
+    load_data = bin_fh.read()
+    final_fh.write(temp_cert + load_data)
+else:
+    shutil.copyfileobj(cert_fh, final_fh)
+    shutil.copyfileobj(bin_fh, final_fh)
 
 final_fh.close()
 cert_fh.close()
@@ -456,7 +488,8 @@ bin_fh.close()
 
 # Delete the temporary files
 os.remove(cert_file_name)
-os.remove(cert_name)
+if(args.device != 'f29h85x'):
+    os.remove(cert_name)
 
 if args.sbl_enc or args.tifs_enc:
     os.remove(get_enc_filename(args.image_bin))
