@@ -84,6 +84,8 @@ extern "C" {
 #define DTHE_AES_CBC_MAC_MODE                               (0x00000080U)
 /** \brief Flag for AES CMAC Mode */
 #define DTHE_AES_CMAC_MODE                                  (0x00000100U)
+/** \brief Flag for AES CCM Mode */
+#define DTHE_AES_CCM_MODE                                   (0x00000120U)
 
 /** \brief Size of AES key is of 128-bit */
 #define DTHE_AES_KEY_128_SIZE                               (0x00000001U)
@@ -258,6 +260,26 @@ typedef struct DTHE_AES_Params_t
      * - In case of streamState == DTHE_AES_STREAM_FINISH, the streamSize does not have to be aligned to 16 Bytes.
      */
     uint32_t            streamSize;
+
+    /**
+     *<   pointer of AAD
+     */
+    uint32_t*           ptrAAD;
+
+    /**
+     *<   AAD length
+     */
+    uint32_t           aadLenght;
+
+    /**
+     *<   CCML value
+     */
+    uint32_t           ccmL;
+
+    /**
+     *<  CCMM value
+     */
+    uint32_t           ccmM;
 }DTHE_AES_Params;
 /* ========================================================================== */
 /*                            Global Variables                                */

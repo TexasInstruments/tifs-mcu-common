@@ -83,8 +83,11 @@ static void DTHE_AES_resetModule(CSL_AesRegs *ptrAesRegs);
 static void DTHE_AES_controlMode(CSL_AesRegs *ptrAesRegs, uint32_t algoType);
 static void DTHE_AES_setOpType(CSL_AesRegs *ptrAesRegs, uint32_t opType);
 static void DTHE_AES_setDataLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t dataLenBytes);
+static void DTHE_AES_setAADLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t aadLenBytes);
 static void DTHE_AES_readTag(CSL_AesRegs *ptrAesRegs, uint32_t* ptrTag);
 static void DTHE_AES_clearAllInterrupts(CSL_AesRegs *ptrAesRegs);
+static void DTHE_AES_setCCM_L(CSL_AesRegs *ptrAesRegs, uint32_t ccmLenBytes);
+static void DTHE_AES_setCCM_M(CSL_AesRegs *ptrAesRegs, uint32_t ccmMLenBytes);
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */
@@ -200,6 +203,18 @@ static void DTHE_AES_controlMode(CSL_AesRegs *ptrAesRegs, uint32_t algoType)
         CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_F9, CSL_AES_S_CTRL_F9_RESETVAL);
         CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_XTS, CSL_AES_S_CTRL_XTS_NOOP);
     }
+    else if(algoType == DTHE_AES_CCM_MODE)
+    {
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CCM, CSL_AES_S_CTRL_CCM_CCM);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CTR, CSL_AES_S_CTRL_CTR_CTR);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_XTS, CSL_AES_S_CTRL_XTS_NOOP);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_MODE, CSL_AES_S_CTRL_MODE_ECB);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_ICM, CSL_AES_S_CTRL_ICM_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CFB, CSL_AES_S_CTRL_CFB_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_F8, CSL_AES_S_CTRL_F8_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_F9, CSL_AES_S_CTRL_F9_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CBCMAC, CSL_AES_S_CTRL_CBCMAC_RESETVAL);
+    }
 }
 
 static void DTHE_AES_CTRWidth(CSL_AesRegs *ptrAesRegs, uint32_t ctrWidth)
@@ -246,6 +261,22 @@ static void DTHE_AES_setDataLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t dataLe
 {
 	/* Setup the data length: */
     CSL_REG32_FINS(&ptrAesRegs->C_LENGTH_0, AES_S_C_LENGTH_0_LENGTH, dataLenBytes);
+}
+
+static void DTHE_AES_setAADLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t aadLenBytes)
+{
+    /* Setup the data length: */
+    CSL_REG32_FINS(&ptrAesRegs->AUTH_LENGTH, AES_S_AUTH_LENGTH_AUTH, aadLenBytes);
+}
+static void DTHE_AES_setCCM_L(CSL_AesRegs *ptrAesRegs, uint32_t ccmLenBytes)
+{
+    /* Setup the data length: */
+    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CCM_L, ccmLenBytes);
+}
+static void DTHE_AES_setCCM_M(CSL_AesRegs *ptrAesRegs, uint32_t ccmMLenBytes)
+{
+    /* Setup the data length: */
+    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CCM_M, ccmMLenBytes);
 }
 
 /**
@@ -369,7 +400,8 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                 if((ptrParams->algoType == DTHE_AES_CBC_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_CTR_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_ICM_MODE)\
-                    ||(ptrParams->algoType == DTHE_AES_CFB_MODE))
+                    ||(ptrParams->algoType == DTHE_AES_CFB_MODE)\
+                    ||(ptrParams->algoType == DTHE_AES_CCM_MODE))
                 {
                     if (ptrParams->ptrIV == NULL)
                     {
@@ -423,13 +455,27 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     /* Enable Save Context in CTRL register*/
                     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_SAVE_CONTEXT, 1U);
                 }
-
+                if (ptrParams->algoType == DTHE_AES_CCM_MODE)
+                {
+                    /* Clear the IV value */
+                    DTHE_AES_clearIV(ptrAesRegs);
+                    DTHE_AES_setIV(ptrAesRegs, ptrParams->ptrIV);
+                    /* Enable Save Context in CTRL register*/
+                    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_SAVE_CONTEXT, 1U);
+                    /* Nonce Length */
+                    DTHE_AES_setCCM_L(ptrAesRegs, ptrParams->ccmL);
+                    /* Tag Length */
+                    DTHE_AES_setCCM_M(ptrAesRegs, ptrParams->ccmM);
+                    DTHE_AES_CTRWidth(ptrAesRegs, DTHE_AES_CTR_WIDTH_32);
+                    /* Setup the AAD data length: */
+                    DTHE_AES_setAADLengthBytes(ptrAesRegs, ptrParams->aadLenght);
+                }
                 /*
                 - DataLength is sent by user, then set the same here.
                 - DataLength is not sent by user, then set the length as maximum. */
                 if((ptrParams->streamState != DTHE_AES_ONE_SHOT_SUPPORT)&&(ptrParams->dataLenBytes == 0))
                 {
-                    /* Setup the data length as 0xFFFFFFFF */
+                    /* Setup the data length: */
                     DTHE_AES_setDataLengthBytes(ptrAesRegs, MAX_VALUE);
                 }
                 else
@@ -437,7 +483,6 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     /* Setup the data length: */
                     DTHE_AES_setDataLengthBytes(ptrAesRegs, ptrParams->dataLenBytes);
                 }
-
                 gStreamState = AES_STATE_IN_PROGRESS;
             }
         }
@@ -508,14 +553,14 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
 
                     DMA_Config_TxChannel(dmaHandle, ptrWordInputBuffer, (uint32_t *)&ptrAesRegs->DATA_IN_3, numBlocks, 0U, DMA_AES_ENABLE);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
                     {
                         DMA_Config_RxChannel(dmaHandle, (uint32_t *)&ptrAesRegs->DATA_IN_3, ptrWordOutputBuffer, numBlocks);
                     }
 
                     DTHE_AES_clearAllInterrupts(ptrAesRegs);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
                     {
                         DTHE_AES_setDMAOutputRequestStatus(ptrAesRegs, 1);
                         DMA_enableRxTransferRegion(dmaHandle);
@@ -524,7 +569,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     DMA_enableTxTransferRegion(dmaHandle);
                     DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 1);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
                     {
                         DMA_WaitForRxTransfer(dmaHandle);
                     }
@@ -532,14 +577,14 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     DMA_WaitForTxTransfer(dmaHandle);
 
                     DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 0);
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
                     {
                         DTHE_AES_setDMAOutputRequestStatus(ptrAesRegs, 0);
                     }
 
                     DMA_disableTxCh(dmaHandle);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
                     {
                         DMA_disableRxCh(dmaHandle);
                     }
@@ -559,7 +604,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                         /* Write the data: */
                         DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[index << 2U]);
 
-                        if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                        if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
                         {
                             /* Wait for the AES IP to be ready with the output data */
                             DTHE_AES_pollOutputReady(ptrAesRegs);
@@ -610,7 +655,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                             /* Read the decrypted data into the decrypted block: */
                             DTHE_AES_readDataBlock(ptrAesRegs, (uint32_t *)&outPartialBlock[0U]);
 
-                            if((ptrParams->algoType == DTHE_AES_ECB_MODE)||(ptrParams->algoType == DTHE_AES_CBC_MODE))
+                            if((ptrParams->algoType == DTHE_AES_ECB_MODE)||(ptrParams->algoType == DTHE_AES_CBC_MODE)||(ptrParams->algoType == DTHE_AES_CCM_MODE))
                             {
                                 /* Copy the data into the output buffer, always is going to be 16U */
                                 (void)memcpy ((void *)&ptrWordOutputBuffer[index << 2U],
@@ -630,7 +675,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                         numBytes = numBytes + partialDataSize;
                     }
 
-                    if((ptrParams->algoType == DTHE_AES_CBC_MAC_MODE)||(ptrParams->algoType == DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType == DTHE_AES_CBC_MAC_MODE)||(ptrParams->algoType == DTHE_AES_CMAC_MODE)||(ptrParams->algoType == DTHE_AES_CCM_MODE))
                     {
                         DTHE_AES_pollContextReady(ptrAesRegs);
                         DTHE_AES_readTag(ptrAesRegs, &ptrParams->ptrTag[0]);
