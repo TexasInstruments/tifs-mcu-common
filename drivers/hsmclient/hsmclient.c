@@ -1503,36 +1503,6 @@ int32_t HsmClient_getDKEK(HsmClient_t* HsmClient,
     return status;
 }
 
-int32_t HsmClient_waitForBootNotify(HsmClient_t* HsmClient, uint32_t timeout)
-{
-    int32_t status ;
-
-    SemaphoreP_constructBinary(&HsmClient->Semaphore,0);
-
-    status = SemaphoreP_pend(&HsmClient->Semaphore,timeout);
-
-    /* first wait for bootnotify from HsmServer
-     * once received return SystemP_SUCCESS */
-    if((status == SystemP_TIMEOUT) || (status == SystemP_FAILURE))
-    {
-        return SystemP_FAILURE;
-    }
-    else
-    {
-        /*TODO: check crc latency and add crc checks later */
-        if(HsmClient->RespMsg.serType == HSM_MSG_BOOT_NOTIFY )
-        {
-            return SystemP_SUCCESS;
-        }
-        /* if message received is not bootnotify */
-        else
-        {
-            return SystemP_FAILURE;
-        }
-    }
-    /* ISR will transfer the response message to HsmClient->RespMsg */
-}
-
 int32_t HsmClient_keyWriter(HsmClient_t* HsmClient, KeyWriterCertHeader_t* certHeader, uint32_t timeout)
 {
     /* make the message */
