@@ -35,8 +35,16 @@
 /* ========================================================================== */
 #include <stdlib.h>
 #include <stdint.h>
-#include <kernel/dpl/SemaphoreP.h>
+#include <inc/hw_types.h>
 #include <security_common/drivers/hsmclient/hsmclient.h>
+
+/********************************************************************************
+ *                                  Macros
+ ****************************************************************************** */
+/* Register to read boot notify status */
+#define READ_BOOT_NOTIFY_REG    (0x301804E4U)
+/* Boot notify status indicating that HSM firmware is now running */
+#define BOOT_NOTIFY_DONE_STATUS (0x5A5A5A5AU)
 
 /*==============================================================================*
  *                          Public Function definition.
@@ -44,30 +52,15 @@
 
 int32_t HsmClient_waitForBootNotify(HsmClient_t* HsmClient, uint32_t timeout)
 {
-    int32_t status ;
-
-    SemaphoreP_constructBinary(&HsmClient->Semaphore,0);
-
-    status = SemaphoreP_pend(&HsmClient->Semaphore,timeout);
-
-    /* first wait for bootnotify from HsmServer
-     * once received return SystemP_SUCCESS */
-    if((status == SystemP_TIMEOUT) || (status == SystemP_FAILURE))
+    int32_t status = SystemP_FAILURE;
+    volatile uint32_t bootNotifyStatus = 0;
+    (void) timeout;
+    
+    while(BOOT_NOTIFY_DONE_STATUS != bootNotifyStatus)
     {
-        return SystemP_FAILURE;
+        bootNotifyStatus = HWREG(READ_BOOT_NOTIFY_REG);
     }
-    else
-    {
-        /*TODO: check crc latency and add crc checks later */
-        if(HsmClient->RespMsg.serType == HSM_MSG_BOOT_NOTIFY )
-        {
-            return SystemP_SUCCESS;
-        }
-        /* if message received is not bootnotify */
-        else
-        {
-            return SystemP_FAILURE;
-        }
-    }
-    /* ISR will transfer the response message to HsmClient->RespMsg */
+    status = SystemP_SUCCESS;
+
+    return status;
 }
