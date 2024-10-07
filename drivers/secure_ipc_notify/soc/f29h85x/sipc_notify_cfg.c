@@ -162,6 +162,12 @@ int32_t SIPC_Register_Isr(HwiP_Params *pHwiParams, SIPC_InterruptConfig *pInterr
     pHwiParams->callback = callback;
     pHwiParams->args = (void*)pInterruptConfig;
     pHwiParams->priority = params->intrPriority;
+    #if defined(__C29__)
+    if(SSU_RAMOPENSTAT_LINK1_RAMOPENS == (HWREG(SSUCPU1CFG_BASE + SSU_O_RAMOPENSTAT) & SSU_RAMOPENSTAT_LINK1_RAMOPENS))
+    {
+        pHwiParams->linkOwner = 1;
+    }
+    #endif
 
     status |= HwiP_construct(
             &pInterruptConfig->hwiObj,
