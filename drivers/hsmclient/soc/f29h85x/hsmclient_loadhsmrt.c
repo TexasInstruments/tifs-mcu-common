@@ -255,6 +255,10 @@ int32_t Hsmclient_loadHSMRtFirmware(HsmClient_t *NotifyClient, const uint8_t *pH
 
     if (pHSMRt_firmware != NULL)
     {
+        if(SSU_RAMOPENSTAT_LINK1_RAMOPENS == (HWREG(SSUCPU1CFG_BASE + SSU_O_RAMOPENSTAT) & SSU_RAMOPENSTAT_LINK1_RAMOPENS))
+        {
+            Interrupt_setINTSP(1);
+        }
         /* clear any pending Interrupt */
         HWREG(CPU1IPCSEND_BASE + IPC_O_CPU1TOHSMINTIPCCLR(0U)) = IPC_CPU1TOHSMINTIPCCLR_IPC0;
         HWREG(CPU1IPCSEND_BASE + IPC_O_CPU1TOHSMINTIPCCLR(1U)) = IPC_CPU1TOHSMINTIPCCLR_IPC0;
@@ -265,6 +269,10 @@ int32_t Hsmclient_loadHSMRtFirmware(HsmClient_t *NotifyClient, const uint8_t *pH
         hwiParams.callback = Hsmclient_mboxReadAckISR;
         hwiParams.args = NULL;
         hwiParams.priority = 10;
+        if(SSU_RAMOPENSTAT_LINK1_RAMOPENS == (HWREG(SSUCPU1CFG_BASE + SSU_O_RAMOPENSTAT) & SSU_RAMOPENSTAT_LINK1_RAMOPENS))
+        {
+            hwiParams.linkOwner = 1;
+        }
 
         status |= HwiP_construct(
             &hwiObjReadDone,
@@ -276,6 +284,10 @@ int32_t Hsmclient_loadHSMRtFirmware(HsmClient_t *NotifyClient, const uint8_t *pH
         hwiParams.callback = Hsmclient_mboxWdoneISR;
         hwiParams.args = &loadHSMResult;
         hwiParams.priority = 9;
+        if(SSU_RAMOPENSTAT_LINK1_RAMOPENS == (HWREG(SSUCPU1CFG_BASE + SSU_O_RAMOPENSTAT) & SSU_RAMOPENSTAT_LINK1_RAMOPENS))
+        {
+            hwiParams.linkOwner = 1;
+        }
 
         status |= HwiP_construct(
             &hwiObjWriteDone,
