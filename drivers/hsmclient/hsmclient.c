@@ -1757,11 +1757,17 @@ int32_t HsmClient_getRandomNum(HsmClient_t* HsmClient,
 
             /* Change the Arguments Address in Physical Address */
             HsmClient->RespMsg.args = (void*)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
-
             CacheP_inv((void*) HsmClient->RespMsg.args, GET_CACHE_ALIGNED_SIZE(sizeof(RNGReq_t)), CacheP_TYPE_ALL);
-            CacheP_inv((void*) ((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr, GET_CACHE_ALIGNED_SIZE(((uint32_t)*(((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr))), CacheP_TYPE_ALL);
             /* check the integrity of args */
             crcArgs = crc16_ccit((uint8_t*)HsmClient->RespMsg.args, sizeof(RNGReq_t));
+
+            ((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr = (uint8_t*)SOC_phyToVirt((uint64_t)(((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr));
+            ((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr = (uint32_t*)SOC_phyToVirt((uint64_t)(((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr));
+            ((RNGReq_t *)HsmClient->RespMsg.args)->seedValue = (uint32_t*)SOC_phyToVirt((uint64_t)(((RNGReq_t *)HsmClient->RespMsg.args)->seedValue));
+            CacheP_inv((void*) ((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr, GET_CACHE_ALIGNED_SIZE(((uint32_t)*(((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr))), CacheP_TYPE_ALL);
+            CacheP_inv((void*) ((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr, GET_CACHE_ALIGNED_SIZE(((uint32_t)*(((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr))), CacheP_TYPE_ALL);
+            CacheP_inv((void*) ((RNGReq_t *)HsmClient->RespMsg.args)->seedValue, GET_CACHE_ALIGNED_SIZE(((uint32_t)*(((RNGReq_t *)HsmClient->RespMsg.args)->seedValue))), CacheP_TYPE_ALL);
+
             if(crcArgs == HsmClient->RespMsg.crcArgs)
             {
                 status = SystemP_SUCCESS;
