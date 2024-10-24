@@ -41,10 +41,10 @@
 extern "C" {
 #endif
 
-#if defined(SOC_AM263X) || defined(SOC_AM263PX) || defined(SOC_AM273X)
+#if defined(SOC_AM263X) || defined(SOC_AM263PX) || defined(SOC_AM273X) || defined (SOC_AM261X)
 #include <drivers/edma.h>
 
-#endif /* defined(SOC_AM263X) || defined(SOC_AM263PX) || defined(SOC_AM273X) */
+#endif /* defined(SOC_AM263X) || defined(SOC_AM263PX) || defined(SOC_AM273X) || defined (SOC_AM261X) */
 
 #ifdef __cplusplus
 }

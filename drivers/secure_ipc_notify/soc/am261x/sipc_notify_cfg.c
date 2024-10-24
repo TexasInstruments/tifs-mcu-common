@@ -78,7 +78,7 @@ SIPC_MailboxConfig gSIPC_SecureHostMboxConfig[CORE_ID_MAX - 1] =
         { /* with HSM0_0 */
             .writeDoneMailboxBaseAddr = R5FSS0_0_MBOX_READ_DONE_ACK,
             .readReqMailboxBaseAddr = R5FSS0_0_MBOX_READ_DONE,
-            .readReqMailboxBaseAddr = R5FSS0_0_MBOX_READ_DONE,
+            .readReqMailboxClrBaseAddr = R5FSS0_0_MBOX_READ_DONE,
             .wrIntrBitPos = HSM0_0_MBOX_WRITE_PROC_BIT_POS,
             .rdIntrBitPos = HSM0_0_MBOX_READ_PROC_BIT_POS,
             .swQ = NULL,

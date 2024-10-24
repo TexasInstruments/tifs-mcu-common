@@ -86,8 +86,8 @@ extern "C"
 #define HSM0_0_MBOX_READ_PROC_BIT_POS    (24U)
 
 /* Mailbox interrupts numbers */
-#define R5FSS0_0_MBOX_READ_ACK_INTR      ( 137U)
-#define R5FSS0_1_MBOX_READ_ACK_INTR      ( 137U)
+#define R5FSS0_0_MBOX_READ_ACK_INTR      ( 159U)
+#define R5FSS0_1_MBOX_READ_ACK_INTR      ( 159U)
 #define HSM0_0_MBOX_READ_ACK_INTR        ( 56U )
 
 /**

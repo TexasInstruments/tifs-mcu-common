@@ -62,7 +62,7 @@
 #include <security_common/drivers/crypto/pka/pka.h>
 #endif
 
-#if defined (SOC_AM261X) || defined(SOC_F29H85X)
+#if defined(SOC_F29H85X) || defined (SOC_AM261X)
 #include <security_common/drivers/crypto/pke/hw_include/pke_hw/inc/pke.h>
 #endif
 
