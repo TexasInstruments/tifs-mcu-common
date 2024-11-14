@@ -65,10 +65,12 @@ extern "C" {
 #define SOC_TYPE_AM273X		0x3
 /** @brief SOC TYPE FLAG for AWR294x */
 #define SOC_TYPE_AWR294X	0x4
-/** @brief SOC TYPE FLAG for AWR294x */
+/** @brief SOC TYPE FLAG for F29H85x */
 #define SOC_TYPE_F29H85x	0x5
+/** @brief SOC TYPE FLAG for AM261x */
+#define SOC_TYPE_AM261x	    0x6
 /** @brief Count of all supported SOC's */
-#define NUM_SOC_TYPE		0x5
+#define NUM_SOC_TYPE		0x6
 
 /** @brief Device type flag for HS-FS */
 #define DEVICE_TYPE_HS_FS   0x00
