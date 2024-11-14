@@ -461,7 +461,7 @@ subprocess.check_output('openssl req -new -x509 -key {} -nodes -outform DER -out
 final_fh = open(args.out_image, 'wb+')
 cert_fh = open(cert_name, 'rb')
 
-if os.path.getsize(args.image_bin) >= g_sbl_hsm_max_size:
+if os.path.getsize(args.image_bin) >= g_sbl_hsm_max_size and (args.boot != 'FLASH'):
     except_msg = f'SBL/HSM size should be less than {g_sbl_hsm_max_size}'
     raise Exception(except_msg)
 
