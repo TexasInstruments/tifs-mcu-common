@@ -91,6 +91,12 @@ extern "C"
 #define HSM_MSG_GET_RAND                         (0x9001)
 /** @brief Get KEYRING import service type ID*/
 #define HSM_MSG_KEYRING_IMPORT                   (0x9039)
+/** @brief Process certificate during firmware update/code provisioning*/
+#define HSM_MSG_FW_UPDATE_CERT_PROCESS           (0x9040)
+/** @brief Program firmware during firmware update/code provisioning*/
+#define HSM_MSG_FW_UPDATE_CODE_PROGRAM           (0x9041)
+/** @brief Program firmware during firmware update/code provisioning*/
+#define HSM_MSG_FW_UPDATE_CODE_VERIFY            (0x9043)
 /* message flags */
 /**
  * @brief
@@ -145,6 +151,13 @@ extern "C"
  *
  */
 #define HSM_KEYRING_CERT_SIZE                      (10280U)
+
+/**
+ * @brief
+ * Maximum firmware Size allowed for code provisioning
+ *
+ */
+#define HSM_FIRMWARE_CHUNK_SIZE                      (16384U)
 
 /**
  * @brief

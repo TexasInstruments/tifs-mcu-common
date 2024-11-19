@@ -293,6 +293,21 @@ typedef struct SecureBoot_Stream_t_
 
 /**
  * @brief
+ * This is Firmware Update request structure passed to HSM core via SIPC as
+ * argument, these parameters are required by the service handler
+ *
+ * @param pStartAddress               Pointer to the start address of data to be programmed in flash
+ * @param dataLength                  Length of data to be programmed in flash
+ */
+typedef struct FirmwareUpdateReq_t_
+{
+    uint8_t  *pStartAddress;        /** Start address of data to be programmed in flash memory */
+    uint32_t dataLength;            /** Length of data to be programmed in flash memory */
+    uint32_t bankMode;              /** Current device bank mode */
+} FirmwareUpdateReq_t;
+
+/**
+ * @brief
  * This API waits for HSMRT load if requested
  * and then waits for boot notification. In case of
  * failure in HSMRT load it returns SystemP_FAILURE.
@@ -723,6 +738,56 @@ int32_t Hsmclient_loadHSMRtFirmwareNonBlocking(const uint8_t *pHSMRt_firmware);
  */
 int32_t HsmClient_getRandomNum(HsmClient_t* HsmClient,
                                         RNGReq_t* getRandomNum);
+
+/**
+ * @brief
+ *  service request issued to HSM server to parse the certificate to validate authenticity
+ *  and identify the firmware component undergoing update
+ *  This service is valid only for F29H85x SOC
+ *
+ * @param HsmClient                [IN] Client object which is using this API.
+ * @param pFirmwareUpdateObject     [IN] Pointer to arguments to be passed to HSM core via SIPC.
+ *
+ * @return
+ * 1. SystemP_SUCCESS if returns successfully
+ * 2. SystemP_FAILURE if NACK message is received or client id not registered.
+ * 3. SystemP_TIMEOUT if timeout exception occours.
+ */
+int32_t HsmClient_firmwareUpdate_CertProcess(HsmClient_t *HsmClient, 
+                                             FirmwareUpdateReq_t *pFirmwareUpdateObject);
+
+/**
+ * @brief
+ *  service request issued to HSM server to program the incoming firmware to device dormant banks
+ *  This service is valid only for F29H85x SOC
+ * 
+ * @param HsmClient                [IN] Client object which is using this API.
+ * @param pFirmwareUpdateObject     [IN] Pointer to arguments to be passed to HSM core via SIPC.
+ *
+ * @return
+ * 1. SystemP_SUCCESS if returns successfully
+ * 2. SystemP_FAILURE if NACK message is received or client id not registered.
+ * 3. SystemP_TIMEOUT if timeout exception occours.
+ */
+int32_t HsmClient_firmwareUpdate_CodeProgram(HsmClient_t *HsmClient, 
+                                             FirmwareUpdateReq_t *pFirmwareUpdateObject);                                        
+
+/**
+ * @brief
+ *  service request issued to HSM server to decrypt the firmware programmed in dormant flash bank in place,
+ *  perform integrity checks on the decrypted firmware and program the certificate in flash memory
+ *  This service is valid only for F29H85x SOC 
+ * 
+ * @param HsmClient                [IN] Client object which is using this API.
+ * @param pFirmwareUpdateObject     [IN] Pointer to arguments to be passed to HSM core via SIPC.
+ *
+ * @return
+ * 1. SystemP_SUCCESS if returns successfully
+ * 2. SystemP_FAILURE if NACK message is received or client id not registered.
+ * 3. SystemP_TIMEOUT if timeout exception occours.
+ */
+int32_t HsmClient_firmwareUpdate_CodeVerify(HsmClient_t *HsmClient, 
+                                             FirmwareUpdateReq_t *pFirmwareUpdateObject);
 /** @} */
 
 #ifdef __cplusplus

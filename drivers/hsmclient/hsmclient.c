@@ -1791,3 +1791,233 @@ int32_t HsmClient_getRandomNum(HsmClient_t* HsmClient,
     }
     return status;
 }
+
+int32_t HsmClient_firmwareUpdate_CertProcess(HsmClient_t *HsmClient, 
+                                             FirmwareUpdateReq_t *pFirmwareUpdateObject)
+{
+    int32_t status = SystemP_SUCCESS;
+    uint16_t crcArgs;
+    uint32_t timeout = SystemP_WAIT_FOREVER;
+
+    /* Proceed only if no previous firmware update API calls have been made, or HsmClient_firmwareUpdate_CodeVerify API is called */
+    if(SystemP_SUCCESS == status)
+    {
+
+        /*populate the send message structure */
+        HsmClient->ReqMsg.destClientId = HSM_CLIENT_ID_1;
+        HsmClient->ReqMsg.srcClientId = HsmClient->ClientId;
+
+        /* Always expect acknowledgement from HSM server */
+        HsmClient->ReqMsg.flags = HSM_FLAG_AOP;
+        HsmClient->ReqMsg.serType = HSM_MSG_FW_UPDATE_CERT_PROCESS;
+    }
+    else
+    {
+        /* Do nothing */
+    }
+
+    /* Proceed only if address and size check falls within bounds */
+    if(SystemP_SUCCESS == status)
+    {
+        /* Change the certificate start address to HSM address space */
+        pFirmwareUpdateObject->pStartAddress = (uint8_t *)(uintptr_t)SOC_virtToPhy(pFirmwareUpdateObject->pStartAddress);
+        /* Add arg crc */
+        HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t*)pFirmwareUpdateObject,sizeof(FirmwareUpdateReq_t));
+        /* Change the Arguments Address in Physical Address */
+        HsmClient->ReqMsg.args = (void*)(uintptr_t)SOC_virtToPhy(pFirmwareUpdateObject);
+
+        /*
+        Write back the HsmVer struct and
+        invalidate the cache before passing it to HSM
+        */
+        CacheP_wbInv(pFirmwareUpdateObject, GET_CACHE_ALIGNED_SIZE(sizeof(FirmwareUpdateReq_t)), CacheP_TYPE_ALL);
+        status = HsmClient_SendAndRecv(HsmClient,timeout);
+
+        if(status == SystemP_SUCCESS)
+        {
+            /* the FW update cert process request has been completed by HSM server
+            * if this request has been processed correctly */
+            if(HsmClient->RespFlag == HSM_FLAG_NACK)
+            {
+                DebugP_log("\r\n [HSM_CLIENT] Firmware update certificate processing request NACKed by HSM server\r\n");
+                status = SystemP_FAILURE;
+            }
+            else
+            {
+                /* Change the Arguments Address in Physical Address */
+                HsmClient->RespMsg.args = (void*)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
+                /* check the integrity of args */
+                crcArgs = crc16_ccit((uint8_t*)(HsmClient->RespMsg.args),0);
+                if(crcArgs == HsmClient->RespMsg.crcArgs)
+                {
+                    status = SystemP_SUCCESS;
+                }
+                else
+                {
+                    DebugP_log("\r\n [HSM_CLIENT] CRC check for firmware update certificate process response failed \r\n");
+                    status = SystemP_FAILURE ;
+                }
+            }
+        }
+    }
+    else
+    {
+        /* Do nothing */
+    }
+
+    return status;
+}
+
+int32_t HsmClient_firmwareUpdate_CodeProgram(HsmClient_t *HsmClient, 
+                                                     FirmwareUpdateReq_t *pFirmwareUpdateObject)
+{
+    int32_t status = SystemP_SUCCESS;
+    uint16_t crcArgs;
+    uint32_t timeout = SystemP_WAIT_FOREVER;
+
+    /* Proceed only if HsmClient_firmwareUpdate_CertProcess API call has been made */
+    if(SystemP_SUCCESS == status)
+    {
+        /*populate the send message structure */
+        HsmClient->ReqMsg.destClientId = HSM_CLIENT_ID_1;
+        HsmClient->ReqMsg.srcClientId = HsmClient->ClientId;
+
+        /* Always expect acknowledgement from HSM server */
+        HsmClient->ReqMsg.flags = HSM_FLAG_AOP;
+        HsmClient->ReqMsg.serType = HSM_MSG_FW_UPDATE_CODE_PROGRAM;
+    }
+    else
+    {
+        /* Do nothing */
+    }
+
+    /* Proceed only if address and size check falls within bounds */
+    if(SystemP_SUCCESS == status)
+    {
+        /* Change the certificate start address to HSM address space */
+        pFirmwareUpdateObject->pStartAddress = (uint8_t *)(uintptr_t)SOC_virtToPhy(pFirmwareUpdateObject->pStartAddress);
+        /* Add arg crc */
+        HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t*)pFirmwareUpdateObject,sizeof(FirmwareUpdateReq_t));
+        /* Change the Arguments Address in Physical Address */
+        HsmClient->ReqMsg.args = (void*)(uintptr_t)SOC_virtToPhy(pFirmwareUpdateObject);
+
+        /*
+        Write back the HsmVer struct and
+        invalidate the cache before passing it to HSM
+        */
+        CacheP_wbInv(pFirmwareUpdateObject, GET_CACHE_ALIGNED_SIZE(sizeof(FirmwareUpdateReq_t)), CacheP_TYPE_ALL);
+        status = HsmClient_SendAndRecv(HsmClient,timeout);
+
+        if(status == SystemP_SUCCESS)
+        {
+            /* the FW update cert process request has been completed by HSM server
+            * if this request has been processed correctly */
+            if(HsmClient->RespFlag == HSM_FLAG_NACK)
+            {
+                DebugP_log("\r\n [HSM_CLIENT] Firmware update code programming request NACKed by HSM server\r\n");
+                status = SystemP_FAILURE;
+            }
+            else
+            {
+                /* Change the Arguments Address in Physical Address */
+                HsmClient->RespMsg.args = (void*)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
+                /* check the integrity of args */
+                crcArgs = crc16_ccit((uint8_t*)(HsmClient->RespMsg.args),0);
+                if(crcArgs == HsmClient->RespMsg.crcArgs)
+                {
+                    status = SystemP_SUCCESS;
+                }
+                else
+                {
+                    DebugP_log("\r\n [HSM_CLIENT] CRC check for firmware update code programming response failed \r\n");
+                    status = SystemP_FAILURE ;
+                }
+            }
+        }
+    }
+    else
+    {
+        /* Do nothing */
+    }
+
+    return status;
+}
+
+int32_t HsmClient_firmwareUpdate_CodeVerify(HsmClient_t *HsmClient, 
+                                             FirmwareUpdateReq_t *pFirmwareUpdateObject)
+{
+    int32_t status = SystemP_SUCCESS;
+    uint16_t crcArgs;
+    uint32_t timeout = SystemP_WAIT_FOREVER;
+
+    /* Proceed only if HsmClient_firmwareUpdate_CodeProgram API call has been made */
+    if(SystemP_SUCCESS == status)
+    {
+        /*populate the send message structure */
+        HsmClient->ReqMsg.destClientId = HSM_CLIENT_ID_1;
+        HsmClient->ReqMsg.srcClientId = HsmClient->ClientId;
+
+        /* Always expect acknowledgement from HSM server */
+        HsmClient->ReqMsg.flags = HSM_FLAG_AOP;
+        HsmClient->ReqMsg.serType = HSM_MSG_FW_UPDATE_CODE_VERIFY;
+
+        /* Address and size check */
+        if((pFirmwareUpdateObject->pStartAddress == NULL)   &&  (pFirmwareUpdateObject->dataLength == 0))
+        {
+            status = SystemP_SUCCESS;
+        }
+        else
+        {
+            status = SystemP_FAILURE;
+        }
+    }
+
+    /* Proceed only if address and size check falls within bounds */
+    if(SystemP_SUCCESS == status)
+    {
+        /* Add arg crc */
+        HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t*)pFirmwareUpdateObject,0);
+        /* Change the Arguments Address in Physical Address */
+        HsmClient->ReqMsg.args = (void*)(uintptr_t)SOC_virtToPhy(pFirmwareUpdateObject);
+
+        /*
+        Write back the HsmVer struct and
+        invalidate the cache before passing it to HSM
+        */
+        CacheP_wbInv(pFirmwareUpdateObject, GET_CACHE_ALIGNED_SIZE(sizeof(FirmwareUpdateReq_t)), CacheP_TYPE_ALL);
+        status = HsmClient_SendAndRecv(HsmClient,timeout);
+
+        if(SystemP_SUCCESS == status)
+        {
+            /* the FW update cert process request has been completed by HSM server
+            * if this request has been processed correctly */
+            if(HSM_FLAG_NACK == HsmClient->RespFlag)
+            {
+                DebugP_log("\r\n [HSM_CLIENT] Firmware update certificate programming request NACKed by HSM server\r\n");
+                status = SystemP_FAILURE;
+            }
+            else
+            {
+                /* Change the Arguments Address in Physical Address */
+                HsmClient->RespMsg.args = (void*)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
+                /* check the integrity of args */
+                crcArgs = crc16_ccit((uint8_t*)(HsmClient->RespMsg.args),0);
+                if(crcArgs == HsmClient->RespMsg.crcArgs)
+                {
+                    status = SystemP_SUCCESS;
+                }
+                else
+                {
+                    DebugP_log("\r\n [HSM_CLIENT] CRC check for firmware update certificate programming response failed \r\n");
+                    status = SystemP_FAILURE ;
+                }
+            }
+        }
+    }
+    else
+    {
+        /* Do nothing */
+    }
+
+    return status;
+}

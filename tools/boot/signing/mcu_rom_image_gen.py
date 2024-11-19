@@ -193,10 +193,15 @@ def get_cert(args):
             bootCore_id = 16
             certType = 1
             bootCoreOptions = 0
-        elif(args.core == 'C29'):
+        elif((args.device == 'f29h85x') and (args.core == 'C29')):
             bootAddress = 0
             bootCore_id = 16
             certType = 1
+            bootCoreOptions = 0
+        elif((args.device == 'f29h85x') and (args.fw_type == 'SEC_CFG')):
+            bootAddress = 0
+            bootCore_id = 16
+            certType = 3
             bootCoreOptions = 0
         else:
             bootAddress = 0
@@ -434,6 +439,8 @@ my_parser.add_argument('--device',       type=str,
                        help='SOC name', default='am263px')
 my_parser.add_argument('--boot',       type=str,
                        help='SOC boot mode', default='RAM')
+my_parser.add_argument('--fw_type',       type=str,
+                       help='firmware type')
 my_parser.add_argument('--img_integ',       type=str,
                        help='Image integrity extension', default='yes')
 
