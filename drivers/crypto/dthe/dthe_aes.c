@@ -459,7 +459,10 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                 {
                     /* Clear the IV value */
                     DTHE_AES_clearIV(ptrAesRegs);
+                    if (ptrParams->ptrIV != NULL)
+                    {
                     DTHE_AES_setIV(ptrAesRegs, ptrParams->ptrIV);
+                  }
                     /* Enable Save Context in CTRL register*/
                     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_SAVE_CONTEXT, 1U);
                     /* Nonce Length */
