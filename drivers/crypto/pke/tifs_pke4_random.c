@@ -9,13 +9,12 @@
  */
 
 /*
- * Copyright 2013-2021 Cryptography Research, Inc. All rights reserved.
- *
- * Unauthorized use (including, without limitation, distribution and copying)
- * is strictly prohibited. All use requires, and is subject to, explicit
- * written authorization and nondisclosure agreements with Cryptography
- * Research.
- */
+* Copyright 2024-25 by Cryptography Research, Inc. (Rambus)
+* All rights reserved.  Unauthorized use (including, without limitation,
+* distribution and copying) is strictly prohibited.  All use
+* requires, and is subject to, explicit written authorization and
+* nondisclosure agreements with your supplier or Cryptography Research (Rambus). 
+*/
 
 #include <stdint.h>
 #include <stddef.h>
