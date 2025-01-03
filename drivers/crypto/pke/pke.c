@@ -321,8 +321,11 @@ AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
     uint32_t curveType = 0;
     cri_ecc_curve_t curve;
     uint32_t bigEndianHash[ECDSA_MAX_LENGTH];
+    uint8_t littleEndianHash[ECDSA_MAX_LENGTH*4U];
     uint32_t size = cp->prime[0];
     uint32_t curvelen = 0;
+    uint32_t nonce[ECDSA_MAX_LENGTH*2];
+    uint32_t* noncePtr = NULL;
 
     /* check sizes */
     if ((!((size <= 2U) || (size > (ECDSA_MAX_LENGTH - 1U)) ||
@@ -341,12 +344,32 @@ AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
 
     if(status == ASYM_CRYPT_RETURN_SUCCESS)
     {
+
+        if((k == NULL) || (PKE_isBigIntZero(&k[0]) == ASYM_CRYPT_RETURN_SUCCESS))
+        {
+            /* Signing operation will generate random nonce, if random 'k' is not provided or set to 0*/
+            noncePtr = NULL;
+        }
+        else
+        {
+            /* Get Nonce Value if not null, pad remaining bytes with 0
+             * Nonce length can be at max 2*curveLen for PKE, any extra bits will be truncated in signing operation
+             * For Deterministic ECDSA, k is not NULL and nonceLen (k[0]*4) is less than 2*curveLen
+             */
+            memset(nonce,0,sizeof(nonce));
+            memcpy(nonce,&k[1],k[0]*4);
+            noncePtr = &nonce[0];
+        }
+
         /* Get the size of input hash */
         size = h[0];
 
         /* PKE only supports Hash as a BigEndian input */
         Crypto_bigIntToUint32((uint32_t *)&h[0], size, (uint32_t *)&bigEndianHash[0]);
         
+        /* PKE only supports Hash as a BigEndian input */
+        Crypto_Uint32ToUint8((uint32_t *)&bigEndianHash[0], size*4U, (uint8_t *)&littleEndianHash[0]);
+
         /* Mapping the curve parameters as input to curve type */
         status = PKE_getPrimeCurveId(cp, &curveType);
         if(status == ASYM_CRYPT_RETURN_SUCCESS)
@@ -365,8 +388,8 @@ AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
                 curvelen = cri_pke_get_curve_length(curve);
             }
 
-            /* Call the ECDSA Sign function */
-            pkeStatus = cri_pke_ecdsa_sign_hash(gPKE, curve, &priv[1U], &bigEndianHash[0], curvelen, &sig->r[1U], &sig->s[1U]);
+            /* Get signature */
+            pkeStatus = cri_pke_ecdsa_sign_extended(gPKE, curve, &priv[1U], NULL, noncePtr, &littleEndianHash[0], curvelen, &sig->r[1U], &sig->s[1U]);
 
             sig->r[0] = cp->prime[0];
             sig->s[0] = cp->prime[0];
@@ -399,6 +422,7 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
     uint32_t curveType = 0;
     cri_ecc_curve_t curve;
     uint32_t bigEndianHash[ECDSA_MAX_LENGTH];
+    uint8_t littleEndianHash[ECDSA_MAX_LENGTH*4U];
     uint32_t size = cp->prime[0];
     uint32_t curvelen = 0;
 
@@ -427,6 +451,9 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
         /* PKE only supports Hash as a BigEndian input */
         Crypto_bigIntToUint32((uint32_t *)&h[0], size, (uint32_t *)&bigEndianHash[0]);
         
+        /* PKE only supports Hash as a BigEndian input */
+        Crypto_Uint32ToUint8((uint32_t *)&bigEndianHash[0], size*4U, (uint8_t *)&littleEndianHash[0]);
+        
         /* Mapping the curve parameters as input to curve type */
         status = PKE_getPrimeCurveId(cp, &curveType);
         if(status == ASYM_CRYPT_RETURN_SUCCESS)
@@ -446,7 +473,7 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
             }
 
             /* Call the ECDSA Verify function */
-            pkeStatus = cri_pke_ecdsa_verify_hash(gPKE, curve, &pub->x[1U], &pub->y[1U], &bigEndianHash[0U], curvelen, &sig->r[1U], &sig->s[1U], &signatureRPrime);
+            pkeStatus = cri_pke_ecdsa_verify_hash(gPKE, curve, &pub->x[1U], &pub->y[1U], &littleEndianHash[0U], curvelen, &sig->r[1U], &sig->s[1U], &signatureRPrime);
 
             /* Revert the input back to original state */
             Crypto_Uint32ToBigInt((uint32_t *)&bigEndianHash, size, (uint32_t *)&h[0]);
