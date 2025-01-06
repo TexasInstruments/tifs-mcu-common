@@ -257,23 +257,23 @@ static void DTHE_AES_setOpType(CSL_AesRegs *ptrAesRegs, uint32_t opType)
 
 }
 
-static void DTHE_AES_setDataLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t dataLenBytes)
+static inline void DTHE_AES_setDataLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t dataLenBytes)
 {
 	/* Setup the data length: */
     CSL_REG32_FINS(&ptrAesRegs->C_LENGTH_0, AES_S_C_LENGTH_0_LENGTH, dataLenBytes);
 }
 
-static void DTHE_AES_setAADLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t aadLenBytes)
+static inline void DTHE_AES_setAADLengthBytes(CSL_AesRegs *ptrAesRegs, uint32_t aadLenBytes)
 {
     /* Setup the data length: */
     CSL_REG32_FINS(&ptrAesRegs->AUTH_LENGTH, AES_S_AUTH_LENGTH_AUTH, aadLenBytes);
 }
-static void DTHE_AES_setCCM_L(CSL_AesRegs *ptrAesRegs, uint32_t ccmLenBytes)
+static inline void DTHE_AES_setCCM_L(CSL_AesRegs *ptrAesRegs, uint32_t ccmLenBytes)
 {
     /* Setup the data length: */
     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CCM_L, ccmLenBytes);
 }
-static void DTHE_AES_setCCM_M(CSL_AesRegs *ptrAesRegs, uint32_t ccmMLenBytes)
+static inline void DTHE_AES_setCCM_M(CSL_AesRegs *ptrAesRegs, uint32_t ccmMLenBytes)
 {
     /* Setup the data length: */
     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CCM_M, ccmMLenBytes);
@@ -461,8 +461,8 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     DTHE_AES_clearIV(ptrAesRegs);
                     if (ptrParams->ptrIV != NULL)
                     {
-                    DTHE_AES_setIV(ptrAesRegs, ptrParams->ptrIV);
-                  }
+                    	DTHE_AES_setIV(ptrAesRegs, ptrParams->ptrIV);
+                  	}
                     /* Enable Save Context in CTRL register*/
                     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_SAVE_CONTEXT, 1U);
                     /* Nonce Length */
@@ -470,8 +470,6 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     /* Tag Length */
                     DTHE_AES_setCCM_M(ptrAesRegs, ptrParams->ccmM);
                     DTHE_AES_CTRWidth(ptrAesRegs, DTHE_AES_CTR_WIDTH_32);
-                    /* Setup the AAD data length: */
-                    DTHE_AES_setAADLengthBytes(ptrAesRegs, ptrParams->aadLenght);
                 }
                 /*
                 - DataLength is sent by user, then set the same here.
@@ -486,6 +484,75 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     /* Setup the data length: */
                     DTHE_AES_setDataLengthBytes(ptrAesRegs, ptrParams->dataLenBytes);
                 }
+				
+				/*Setup Aad data*/
+                if(ptrParams->algoType == DTHE_AES_CCM_MODE)
+                {   
+                    /*Send AAD Data*/
+                    if((ptrParams->aadLength%4U)==0U)
+                    {
+                        DTHE_AES_setAADLengthBytes(ptrAesRegs, ptrParams->aadLength);
+                        if(ptrParams->aadLength>0U)
+                        {
+                            ptrWordInputBuffer  = &ptrParams->ptrAAD[0];
+                            numBlocks = (ptrParams->aadLength)/16;
+                            partialDataSize = (ptrParams->aadLength)%16;
+
+                            if ( (config->dmaEnable == DMA_ENABLE) && (numBlocks > 0U) )
+                            {
+
+                                /* Open DMA channel for AES AAD */
+                                dmaHandle = DMA_open(0);
+                                
+                                /* Configure DMA channel to transfer the data to Data Register */
+                                DMA_Config_TxChannel(dmaHandle, ptrWordInputBuffer, (uint32_t *)&ptrAesRegs->DATA_IN_3, numBlocks, 0U, DMA_AES_ENABLE);
+                                
+                                /* Clear all the DMA interrupts */
+                                DTHE_AES_clearAllInterrupts(ptrAesRegs);
+
+                                /* Enable the transfer region */
+                                DMA_enableTxTransferRegion(dmaHandle);
+
+                                /* Force the first trigger */
+                                DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 1);
+
+                                /* Poll for completion */
+                                DMA_WaitForTxTransfer(dmaHandle);
+
+                                /* Clear the status, channel and handle */
+                                DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 0);
+                                DMA_disableTxCh(dmaHandle);
+                                DMA_close(dmaHandle);
+
+                                index = numBlocks;
+                            }
+                            else
+                            {
+                                /* Cycle through and write all the full blocks: */
+                                for (index = 0U; index < (numBlocks); index++)
+                                {
+                                    /* Wait for the AES IP to be ready to receive the data: */
+                                    DTHE_AES_pollInputReady(ptrAesRegs);
+
+                                    /* Write the data: */
+                                    DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[index << 2U]);
+                                }
+                            }
+                            
+                            if(partialDataSize != 0)
+                            {
+                                memset(inPartialBlock,0u,sizeof(inPartialBlock));
+                                memcpy(inPartialBlock,&ptrWordInputBuffer[numBlocks*4],partialDataSize);
+
+                                /* Wait for the AES IP to be ready to receive the data: */
+                                DTHE_AES_pollInputReady(ptrAesRegs);
+                                /* Write the data: */
+                                DTHE_AES_writeDataBlock(ptrAesRegs, (uint32_t*)&inPartialBlock[0]);
+                            }
+                        }
+                    }
+                }
+				
                 gStreamState = AES_STATE_IN_PROGRESS;
             }
         }
@@ -556,14 +623,14 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
 
                     DMA_Config_TxChannel(dmaHandle, ptrWordInputBuffer, (uint32_t *)&ptrAesRegs->DATA_IN_3, numBlocks, 0U, DMA_AES_ENABLE);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
                     {
                         DMA_Config_RxChannel(dmaHandle, (uint32_t *)&ptrAesRegs->DATA_IN_3, ptrWordOutputBuffer, numBlocks);
                     }
 
                     DTHE_AES_clearAllInterrupts(ptrAesRegs);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
                     {
                         DTHE_AES_setDMAOutputRequestStatus(ptrAesRegs, 1);
                         DMA_enableRxTransferRegion(dmaHandle);
@@ -572,7 +639,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     DMA_enableTxTransferRegion(dmaHandle);
                     DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 1);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
                     {
                         DMA_WaitForRxTransfer(dmaHandle);
                     }
@@ -580,17 +647,19 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     DMA_WaitForTxTransfer(dmaHandle);
 
                     DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 0);
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
                     {
                         DTHE_AES_setDMAOutputRequestStatus(ptrAesRegs, 0);
                     }
 
                     DMA_disableTxCh(dmaHandle);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
                     {
                         DMA_disableRxCh(dmaHandle);
                     }
+
+                    DMA_close(dmaHandle);
 
                     /* Compute the number of bytes which have been processed: */
                     numBytes = numBytes + (numBlocks * 4 * sizeof(uint32_t));
@@ -607,7 +676,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                         /* Write the data: */
                         DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[index << 2U]);
 
-                        if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->aadLenght == 0U))
+                        if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
                         {
                             /* Wait for the AES IP to be ready with the output data */
                             DTHE_AES_pollOutputReady(ptrAesRegs);

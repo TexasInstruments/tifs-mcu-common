@@ -269,7 +269,7 @@ typedef struct DTHE_AES_Params_t
     /**
      *<   AAD length
      */
-    uint32_t           aadLenght;
+    uint32_t           aadLength;
 
     /**
      *<   CCML value
