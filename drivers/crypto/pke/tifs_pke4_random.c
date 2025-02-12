@@ -38,18 +38,18 @@ int cri_pke_get_true_random(void *buf, size_t len)
 
 	for(i = 0; i < len; i=i+16)
 	{
-		if(len<16)
+		if((len-i)<16)
 		{
 			(void)RNG_read(pke_rng_handle, &rand_val[0]);
-			memcpy((uint8_t *)buf + i, rand_val, len);
+			memcpy((uint8_t *)buf + i, rand_val, (len-i));
 		}
 		else
 		{
 			(void)RNG_read(pke_rng_handle, &rand_val[0]);
-			((uint32_t *)buf + i)[0U] = rand_val[0U];
-			((uint32_t *)buf + i)[1U] = rand_val[1U];
-			((uint32_t *)buf + i)[2U] = rand_val[2U];
-			((uint32_t *)buf + i)[3U] = rand_val[3U];
+			((uint32_t *)buf + (i/sizeof(uint32_t)))[0U] = rand_val[0U];
+			((uint32_t *)buf + (i/sizeof(uint32_t)))[1U] = rand_val[1U];
+			((uint32_t *)buf + (i/sizeof(uint32_t)))[2U] = rand_val[2U];
+			((uint32_t *)buf + (i/sizeof(uint32_t)))[3U] = rand_val[3U];
 		}
 	}
 		
