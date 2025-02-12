@@ -339,6 +339,13 @@ void HsmClient_deInit(void);
 
 /**
  * @brief
+ * Customize the size of the HSM client message queue
+ *
+ * @param configured_hsm_client_msg_queue_size  Desired size of the HSM client message queue passed by the user.
+ */
+void HsmClient_SecureBootQueueInit(uint32_t configured_hsm_client_msg_queue_size);
+/**
+ * @brief
  *  populates the current HSMRT version Id
  *  by default the hsm flag is set to HSM_FLAG_AOP for this service
  *

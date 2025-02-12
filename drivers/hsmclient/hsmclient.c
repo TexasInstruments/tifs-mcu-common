@@ -71,7 +71,6 @@ void Hsmclient_updateBootNotificationRegister(void);
  *          - PT note for boot sequence info
  *          - PT note containing Random string for decryption verification
  */
-#define HSM_CLIENT_MSG_QUEUE_SIZE (1028)
 
 /* ========================================================================== */
 /*                            Global Variables                                */
@@ -90,9 +89,10 @@ static int32_t gLastSentIndex = -1 ;
 static int32_t gLastEnqueuedIndex = -1;
 static int32_t gNum_HsmRequestSent = 0;
 static volatile int32_t gNum_HsmResponseReceived = 0;
+static uint32_t hsm_client_msg_queue_size = 64U;
 
 /* Queue used to store HSM client messages that need to be dispatched via SIPC */
-static HsmMsg_t gHsmClientMsgQueue[HSM_CLIENT_MSG_QUEUE_SIZE];
+extern HsmMsg_t gHsmClientMsgQueue[];
 
 /*==========================================================================
  *                        Static Function Declarations
@@ -170,7 +170,7 @@ static int32_t HsmClient_EnqueueAndSendMsg(HsmMsg_t message)
 
 	message.crcMsg = crc16_ccit((uint8_t*)&message,(sizeof(HsmMsg_t)-2));
 
-	if (gLastEnqueuedIndex < (HSM_CLIENT_MSG_QUEUE_SIZE - 1))
+	if (gLastEnqueuedIndex < (int32_t)(hsm_client_msg_queue_size - 1))
 	{
 		gHsmClientMsgQueue[++gLastEnqueuedIndex] = message;
 
@@ -230,7 +230,7 @@ static int32_t HsmClient_EnqueueAndSendMsgBlocking(HsmMsg_t message)
 
 	message.crcMsg = crc16_ccit((uint8_t*)&message,(sizeof(HsmMsg_t)-2));
 
-	if (gLastEnqueuedIndex < (HSM_CLIENT_MSG_QUEUE_SIZE - 1))
+	if (gLastEnqueuedIndex < (int32_t)(hsm_client_msg_queue_size - 1))
 	{
 		gHsmClientMsgQueue[++gLastEnqueuedIndex] = message;
 
@@ -483,6 +483,11 @@ int32_t HsmClient_init(SIPC_Params* params)
         DebugP_log("[HSM_CLIENT] Secure Host initialization failed for R5F%d \r\n",selfCoreId);
     }
     return status;
+}
+
+void HsmClient_SecureBootQueueInit(uint32_t configured_hsm_client_msg_queue_size){
+    /* Customize the size of the HSM client message queue*/
+    hsm_client_msg_queue_size = configured_hsm_client_msg_queue_size; 
 }
 
 /* do sipc deinit */
