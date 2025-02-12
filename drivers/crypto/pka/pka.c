@@ -862,6 +862,23 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
     return (status);
 }
 
+AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPrivate(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp, 
+                        uint32_t priv[ECDSA_MAX_LENGTH])
+{
+    /* This is not supported for PKA Engine */
+    return ASYM_CRYPT_RETURN_FAILURE;
+}
+
+AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPublic(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp, 
+                        struct AsymCrypt_ECPoint *pub, 
+                        const uint32_t priv[ECDSA_MAX_LENGTH])
+{
+    /* This is not supported for PKA Engine */
+    return ASYM_CRYPT_RETURN_FAILURE;
+}
+
 static AsymCrypt_Return_t PKA_enable(PKA_Attrs *attrs, uint32_t inst)
 {
     AsymCrypt_Return_t status = ASYM_CRYPT_RETURN_SUCCESS;

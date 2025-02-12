@@ -492,6 +492,108 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
     return (status);
 }
 
+AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPrivate(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp, 
+                        uint32_t priv[ECDSA_MAX_LENGTH])
+{
+    AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
+    int pkeStatus = -1;
+    uint32_t curveType = 0;
+    cri_ecc_curve_t curve;
+    uint32_t size = cp->prime[0];
+
+    /* check sizes */
+    if (!((size <= 2U) || (size > (ECDSA_MAX_LENGTH - 1U)) ||
+           (size != cp->order[0]) || (size < cp->a[0]) ||
+           (size < cp->b[0]) || (size < cp->g.x[0]) ||
+           (size < cp->g.y[0])))
+    {
+        /* Checking handle is opened or not */
+        if(NULL != handle)
+        {
+            status = ASYM_CRYPT_RETURN_SUCCESS;
+        }
+    }
+
+    if(status == ASYM_CRYPT_RETURN_SUCCESS)
+    {      
+        /* Mapping the curve parameters as input to curve type */
+        status = PKE_getPrimeCurveId(cp, &curveType);
+        if(status == ASYM_CRYPT_RETURN_SUCCESS)
+        {
+            /* Get curve id based on the cri_ecc_curve_t param set */
+            curve = cri_pke_get_curve(curveType);
+
+            /* Call the ECDSA KeyGen function to generate private key */
+            pkeStatus = cri_pke_ecc_private_keygen(gPKE, curve, &priv[1U]);
+
+            if (pkeStatus == 0)
+            {
+                status  = ASYM_CRYPT_RETURN_SUCCESS;
+                priv[0] = size;
+            }
+            else
+            {
+                status  = ASYM_CRYPT_RETURN_FAILURE;
+            }
+        }
+    }
+
+    return (status);
+}
+
+AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPublic(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp, 
+                        struct AsymCrypt_ECPoint *pub, 
+                        const uint32_t priv[ECDSA_MAX_LENGTH])
+{
+    AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
+    int pkeStatus = -1;
+    uint32_t curveType = 0;
+    cri_ecc_curve_t curve;
+    uint32_t size = cp->prime[0];
+
+    /* check sizes */
+    if (!((size <= 2U) || (size > (ECDSA_MAX_LENGTH - 1U)) ||
+           (size != cp->order[0]) || (size < cp->a[0]) ||
+           (size < cp->b[0]) || (size < cp->g.x[0]) ||
+           (size < cp->g.y[0]) || (size < priv[0])))
+    {
+        /* Checking handle is opened or not */
+        if(NULL != handle)
+        {
+            status = ASYM_CRYPT_RETURN_SUCCESS;
+        }
+    }
+
+    if(status == ASYM_CRYPT_RETURN_SUCCESS)
+    {      
+        /* Mapping the curve parameters as input to curve type */
+        status = PKE_getPrimeCurveId(cp, &curveType);
+        if(status == ASYM_CRYPT_RETURN_SUCCESS)
+        {
+            /* Get curve id based on the cri_ecc_curve_t param set */
+            curve = cri_pke_get_curve(curveType);
+
+            /* Call the ECDSA KeyGen function to generate private key */
+            pkeStatus = cri_pke_ecdsa_keygen(gPKE, curve, &priv[1U], &pub->x[1U], &pub->y[1U]);
+
+            if (pkeStatus == 0)
+            {
+                status  = ASYM_CRYPT_RETURN_SUCCESS;
+                pub->x[0U] = size;
+                pub->y[0U] = size;
+            }
+            else
+            {
+                status  = ASYM_CRYPT_RETURN_FAILURE;
+            }
+        }
+    }
+
+    return (status);
+}
+
 uint32_t PKE_countLeadingZeros(uint32_t x)
 {
     uint32_t bit_count = 0, lz = 0;

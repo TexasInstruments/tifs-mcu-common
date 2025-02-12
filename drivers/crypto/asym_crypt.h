@@ -310,6 +310,36 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
                         const struct AsymCrypt_ECDSASig *sig, 
                         const uint32_t h[ECDSA_MAX_LENGTH]);
 
+/**
+ * \brief ECDSA KeyGen Private Key function
+ *
+ * \param handle  #AsymCrypt_Handle returned from #AsymCrypt_open()
+ * \param cp      EC curve parameters
+ * \param priv    EC Generated Private Key
+ *
+ * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
+ *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
+ */
+AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPrivate(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp, 
+                        uint32_t priv[ECDSA_MAX_LENGTH]);
+
+/**
+ * \brief ECDSA KeyGen Public Key function
+ *
+ * \param handle  #AsymCrypt_Handle returned from #AsymCrypt_open()
+ * \param cp      EC curve parameters
+ * \param priv    EC Private Key as input
+ * \param pub     EC Generated Private Key
+ *
+ * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
+ *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
+ */
+AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPublic(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp, 
+                        struct AsymCrypt_ECPoint *pub, 
+                        const uint32_t priv[ECDSA_MAX_LENGTH]);
+
 #ifdef __cplusplus
 }
 #endif
