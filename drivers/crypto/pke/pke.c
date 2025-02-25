@@ -7,7 +7,7 @@
 */
 
 /*
- *  Copyright (C) 2024 Texas Instruments Incorporated
+ *  Copyright (C) 2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -258,7 +258,7 @@ AsymCrypt_Return_t AsymCrypt_RSAPrivate(AsymCrypt_Handle handle,
     return (status);
 }
 
-AsymCrypt_Return_t AsymCrypt_RSAPublic(AsymCrypt_Handle handle, 
+AsymCrypt_Return_t AsymCrypt_RSAPublic(AsymCrypt_Handle handle,
                     const uint32_t m[RSA_MAX_LENGTH],
                     const struct AsymCrypt_RSAPubkey *k,
                     uint32_t result[RSA_MAX_LENGTH])
@@ -309,11 +309,11 @@ AsymCrypt_Return_t AsymCrypt_RSAPublic(AsymCrypt_Handle handle,
     return (status);
 }
 
-AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle, 
-                    const struct AsymCrypt_ECPrimeCurveP *cp, 
-                    const uint32_t priv[ECDSA_MAX_LENGTH], 
-                    const uint32_t k[ECDSA_MAX_LENGTH], 
-                    const uint32_t h[ECDSA_MAX_LENGTH], 
+AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
+                    const struct AsymCrypt_ECPrimeCurveP *cp,
+                    const uint32_t priv[ECDSA_MAX_LENGTH],
+                    const uint32_t k[ECDSA_MAX_LENGTH],
+                    const uint32_t h[ECDSA_MAX_LENGTH],
                     struct AsymCrypt_ECDSASig *sig)
 {
     AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
@@ -412,9 +412,9 @@ AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
 }
 
 AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
-                        const struct AsymCrypt_ECPrimeCurveP *cp, 
-                        const struct AsymCrypt_ECPoint *pub, 
-                        const struct AsymCrypt_ECDSASig *sig, 
+                        const struct AsymCrypt_ECPrimeCurveP *cp,
+                        const struct AsymCrypt_ECPoint *pub,
+                        const struct AsymCrypt_ECDSASig *sig,
                         const uint32_t h[ECDSA_MAX_LENGTH])
 {
     AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
@@ -493,7 +493,7 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
 }
 
 AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPrivate(AsymCrypt_Handle handle,
-                        const struct AsymCrypt_ECPrimeCurveP *cp, 
+                        const struct AsymCrypt_ECPrimeCurveP *cp,
                         uint32_t priv[ECDSA_MAX_LENGTH])
 {
     AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
@@ -543,8 +543,8 @@ AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPrivate(AsymCrypt_Handle handle,
 }
 
 AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPublic(AsymCrypt_Handle handle,
-                        const struct AsymCrypt_ECPrimeCurveP *cp, 
-                        struct AsymCrypt_ECPoint *pub, 
+                        const struct AsymCrypt_ECPrimeCurveP *cp,
+                        struct AsymCrypt_ECPoint *pub,
                         const uint32_t priv[ECDSA_MAX_LENGTH])
 {
     AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
@@ -594,6 +594,251 @@ AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPublic(AsymCrypt_Handle handle,
     return (status);
 }
 
+AsymCrypt_Return_t AsymCrypt_EddsaSign(AsymCrypt_Handle handle,
+                             AsymCrypt_ExecuteShaCallback shaCbFxn,
+                             const struct AsymCrypt_EddsaKey *key,
+                             const uint8_t *ptrData,
+                             const uint32_t dataSizeByte,
+                             struct AsymCrypt_EddsaSig *sig,
+                             AsymCrypt_EdCurveType_t input_curve)
+{
+    AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
+    int pkeStatus = -1;
+    cri_ecc_curve_t curve = NULL;
+    uint8_t r[EDDSA_ED448_HASH_LEN];
+    uint8_t hash[EDDSA_ED448_HASH_LEN];
+    uint8_t *ptrdataInput = NULL;
+    uint8_t tempBuf[EDDSA_ED448_HASH_LEN*2U];
+    uint8_t k0[EDDSA_ED448_HASH_LEN];
+    uint8_t k1[EDDSA_ED448_HASH_LEN];
+    uint32_t hash_len;
+    uint32_t key_len;
+
+    if (ASYM_CRYPT_CURVE_TYPE_EDDSA_25519 == input_curve) {
+        hash_len = EDDSA_ED25519_HASH_LEN;
+        key_len = EDDSA_ED25519_KEY_LEN;
+        curve = cri_pke_get_curve(CRI_ECC_CURVE_ED25519);
+    } else if (ASYM_CRYPT_CURVE_TYPE_EDDSA_448 == input_curve) {
+        hash_len = EDDSA_ED448_HASH_LEN;
+        key_len = EDDSA_ED448_KEY_LEN;
+        curve = cri_pke_get_curve(CRI_ECC_CURVE_ED448);
+    }
+
+    if ((curve == NULL) || (handle == NULL) || (shaCbFxn == NULL)|| (ptrData == NULL)|| (key == NULL) || (sig == NULL)) {
+        status  = ASYM_CRYPT_RETURN_FAILURE;
+    } else {
+        /* Backup User Data before using the space */
+        ptrdataInput = (uint8_t*)(ptrData - hash_len);
+        memcpy(tempBuf, ptrdataInput, hash_len);
+
+        /* Get private key hash (SHA/SHAKE digest) */
+        status = shaCbFxn((uint8_t*)&(key->privKey), key_len, hash);
+
+        /* Copy 1st part of privKey hash */
+        memcpy(k0, hash, key_len);
+
+        /* Copy 2nd part of privKey hash */
+        memcpy(k1, (hash + key_len), key_len);
+
+        /* Copy 1st part of privKey hash, and clamp it */
+        if (input_curve == ASYM_CRYPT_CURVE_TYPE_EDDSA_25519) {
+            k0[0] &= 0xF8;
+            k0[31] &= 0x7F;
+            k0[31] |= 0x40;
+        } else {
+            k0[0] &= 0xFC;
+            k0[31] &= 0x00;
+            for (uint8_t i = 1; i <= 31 ; i++) {
+                k0[i] |= 0x80;
+            }
+        }
+
+        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+            /* Copy k1 || M into data input */
+            ptrdataInput += key_len;
+            memcpy(ptrdataInput, k1, key_len);
+
+            /* Store the nonce i.e. r = Hash(k1||M) */
+            status = shaCbFxn(ptrdataInput, (dataSizeByte + key_len), r);
+        }
+
+        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+            /* Get 'R' value of signature */
+            pkeStatus = cri_pke_eddsa_sign_phase1(gPKE, curve, r, k0, sig->R);
+            if (pkeStatus == 0) {
+                status = ASYM_CRYPT_RETURN_SUCCESS;
+            } else {
+                status = ASYM_CRYPT_RETURN_FAILURE;
+            }
+        }
+
+        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+            /* Get SHA-512 Hash(sig.R||pubKey||msg) */
+            ptrdataInput =  (uint8_t*)(ptrData - hash_len);
+            memcpy(&ptrdataInput[0], sig->R, key_len);
+            memcpy(&ptrdataInput[key_len], key->pubKey, key_len);
+            status = shaCbFxn(ptrdataInput, (dataSizeByte + (2U*key_len)), hash);
+        }
+
+        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+            /* Get 'S' value of signature */
+            pkeStatus = cri_pke_eddsa_sign_phase2(gPKE, curve, hash, sig->s);
+        }
+
+        /* Copy back data from tempBuf*/
+        ptrdataInput =  (uint8_t*)(ptrData - hash_len);
+        memcpy(tempBuf, ptrdataInput, hash_len);
+    }
+
+    if (pkeStatus == 0) {
+        status  = ASYM_CRYPT_RETURN_SUCCESS;
+    } else {
+        status  = ASYM_CRYPT_RETURN_FAILURE;
+    }
+
+    return (status);
+
+}
+
+AsymCrypt_Return_t AsymCrypt_EddsaVerify(AsymCrypt_Handle handle,
+                              AsymCrypt_ExecuteShaCallback shaCbFxn,
+                              const uint8_t pubKey[EDDSA_MAX_KEY_LEN],
+                              const uint8_t *ptrData,
+                              const uint32_t dataSizeByte,
+                              const struct AsymCrypt_EddsaSig *sig,
+                              AsymCrypt_EdCurveType_t input_curve)
+{
+    AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
+    cri_ecc_curve_t curve = NULL;
+    uint32_t curvelen = 0;
+    uint8_t    *ptrdataInput = NULL;
+    uint8_t tempBuff[EDDSA_ED448_HASH_LEN];
+    uint8_t hash512[EDDSA_ED448_HASH_LEN];
+    int pkeStatus = -1;
+    uint32_t hash_len;
+    uint32_t key_len;
+
+    if (ASYM_CRYPT_CURVE_TYPE_EDDSA_25519 == input_curve) {
+        hash_len = EDDSA_ED25519_HASH_LEN;
+        key_len = EDDSA_ED25519_KEY_LEN;
+        curve = cri_pke_get_curve(CRI_ECC_CURVE_ED25519);
+        curvelen = cri_pke_get_curve_length(curve);
+    } else if (ASYM_CRYPT_CURVE_TYPE_EDDSA_448 == input_curve) {
+        hash_len = EDDSA_ED448_HASH_LEN;
+        key_len = EDDSA_ED448_KEY_LEN;
+        curve = cri_pke_get_curve(CRI_ECC_CURVE_ED448);
+        curvelen = cri_pke_get_curve_length(curve);
+    }
+
+    if ((curve == NULL) || (handle == NULL) || (shaCbFxn == NULL)|| (ptrData == NULL) || (sig == NULL)) {
+        status  = ASYM_CRYPT_RETURN_FAILURE;
+    } else {
+        /* Copy 64 bytes before message(ptrData) to tempBuf */
+        ptrdataInput = (uint8_t*)(ptrData - hash_len);
+        memcpy(tempBuff, ptrdataInput, hash_len);
+
+        /* Get SHA-512 Hash(sig.R||pubKey||msg) */
+        memcpy(&ptrdataInput[0], sig->R, key_len);
+        memcpy(&ptrdataInput[key_len], pubKey, key_len);
+
+        status = shaCbFxn(ptrdataInput, dataSizeByte + (2U*key_len), hash512);
+
+        /*Restore back 64 Bytes from tempBuff*/
+        memcpy(ptrdataInput, tempBuff, hash_len);
+
+        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+            pkeStatus = cri_pke_eddsa_verify(gPKE, curve, pubKey, hash512, curvelen, sig->R, sig->s, signatureRPrime);
+
+            if (pkeStatus == 0) {
+                /* PKE Ed25519 Verify operation success*/
+                status  = ASYM_CRYPT_RETURN_FAILURE;
+
+                if (memcmp(sig->R, signatureRPrime, key_len) == 0) {
+                    /* PKE Ed25519 Verification Signature matches*/
+                    status = ASYM_CRYPT_RETURN_SUCCESS;
+                } else {
+                    /* PKE Ed25519 Verification Signature does not matches*/
+                    status = ASYM_CRYPT_RETURN_FAILURE;
+                }
+            } else {
+                status  = ASYM_CRYPT_RETURN_FAILURE;
+            }
+        } else {
+            status  = ASYM_CRYPT_RETURN_FAILURE;
+        }
+    }
+
+    return (status);
+}
+
+
+AsymCrypt_Return_t AsymCrypt_EddsaGetPubKey(AsymCrypt_Handle handle,
+                                   AsymCrypt_ExecuteShaCallback shaCbFxn,
+                                   uint8_t privKey[EDDSA_MAX_KEY_LEN],
+                                   uint8_t pubKey[EDDSA_MAX_KEY_LEN],
+                                   AsymCrypt_EdCurveType_t input_curve)
+{
+    AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
+    int pkeStatus = -1;
+    cri_ecc_curve_t curve = NULL;
+    uint8_t privKeyHash[64];
+    const uint8_t *privKeyPtr = &privKey[0];
+    uint32_t key_len = 0U;
+
+    if (ASYM_CRYPT_CURVE_TYPE_EDDSA_25519 == input_curve) {
+        key_len = EDDSA_ED25519_KEY_LEN;
+        curve = cri_pke_get_curve(CRI_ECC_CURVE_ED25519);
+    } else if (ASYM_CRYPT_CURVE_TYPE_EDDSA_448 == input_curve) {
+        key_len = EDDSA_ED448_HASH_LEN;
+        curve = cri_pke_get_curve(CRI_ECC_CURVE_ED448);
+    }
+
+    if ((curve == NULL) || (shaCbFxn == NULL) || (privKey == NULL) || (pubKey == NULL)) {
+        status = ASYM_CRYPT_RETURN_FAILURE;
+    } else {
+        /*Get 64 byte SHA-512 Hash of private key*/
+        status = shaCbFxn(privKey, key_len, privKeyHash);
+
+        /*Only first half of privatekey hash is used, clamp the fist half and clear the second half*/
+        if (input_curve == ASYM_CRYPT_CURVE_TYPE_EDDSA_25519) {
+            privKeyHash[0] &= 0xF8;
+            privKeyHash[31] &= 0x7F;
+            privKeyHash[31] |= 0x40;
+        } else {
+            privKeyHash[0] &= 0xFC;
+            privKeyHash[31] &= 0x00;
+            for (uint8_t i = 1; i <= 31 ; i++) {
+                privKeyHash[i] |= 0x80;
+            }
+        }
+
+        memset((uint8_t*)&privKeyHash[key_len], 0U, key_len);
+
+        /*Get publicKey for the given privateKey
+        * Note:-
+        * This function cri_pke_eddsa_sign_phase1() returns "[nonce]*G" in encoded form which is 'R' (sig.R) in the EdDSA signature.
+        * Nonce (64-byte value passed as 3rd parameter in this function), and G is base point of Ed25519 curve (G is stored in PKE-Rom)).
+        * Since pubKey = [privKeyHash_clamped]*G in encoded form, where privKeyHash_clamped is first half of clamped sha512-hash of private Key,
+        * So this function is used here to generate the public key from the given private key.
+        * The 4th parameter (i.e. 2nd half clamped of privKeyHash) is used to prepare for cri_pke_eddsa_sign_phase2() in signature 'S' (sig.S) generation.
+        * For generating public key, 4th parameter is dummy (so passing privKeyPtr just to ensure a valid pointer is passed).
+        */
+        pkeStatus = cri_pke_eddsa_sign_phase1(gPKE, curve, privKeyHash, privKeyPtr, pubKey);
+        if (pkeStatus == 0) {
+            /* Clear PKE Ram*/
+           pkeStatus = cri_pke_clear_ram();
+        }
+    }
+
+    if (pkeStatus == 0) {
+        status  = ASYM_CRYPT_RETURN_SUCCESS;
+    } else {
+        status  = ASYM_CRYPT_RETURN_FAILURE;
+    }
+
+    return (status);
+}
+
 uint32_t PKE_countLeadingZeros(uint32_t x)
 {
     uint32_t bit_count = 0, lz = 0;
@@ -602,8 +847,7 @@ uint32_t PKE_countLeadingZeros(uint32_t x)
 
     /* Left shift until Most significant bit doesn become 1 */
 
-    while( (x & (1 << (bit_count - 1))) == 0)
-    {
+    while ((x & (1 << (bit_count - 1))) == 0) {
         x <<= 1;
         lz++;
     }
@@ -622,21 +866,18 @@ static uint32_t PKE_bigIntBitLen(const uint32_t bn[ECDSA_MAX_LENGTH])
 {
     uint32_t i, status;
 
-    for (i = bn[0]; i > 0U; i--)
-    {
-        if (bn[i] != 0U)
-        {
+    for (i = bn[0]; i > 0U; i--) {
+        if (bn[i] != 0U) {
             break;
         }
     }
-    if (i == 0U)
-    {
+
+    if (i == 0U) {
         status = 0U;
-    }
-    else
-    {
+    } else {
         status = (i * 32U) - PKE_countLeadingZeros((int32_t) bn[i]);
     }
+
     return (status);
 }
 
@@ -652,10 +893,8 @@ static AsymCrypt_Return_t PKE_isBigIntZero(const uint32_t bn[RSA_MAX_LENGTH])
     uint32_t i;
     AsymCrypt_Return_t ret = ASYM_CRYPT_RETURN_SUCCESS;
 
-    for (i = 0U; i <= bn[0]; i++)
-    {
-        if (bn[i] != 0U)
-        {
+    for (i = 0U; i <= bn[0]; i++) {
+        if (bn[i] != 0U) {
             ret = ASYM_CRYPT_RETURN_FAILURE;
             break;
         }
