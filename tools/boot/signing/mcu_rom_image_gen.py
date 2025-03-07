@@ -206,7 +206,7 @@ def get_cert(args):
         elif((args.device == 'f29h85x') and (args.core == 'C29') and (args.fw_type == 'CPU3')):
             bootAddress = 0
             bootCore_id = 16
-            certType = 3
+            certType = 4
             bootCoreOptions = 0
         else:
             bootAddress = 0
