@@ -292,7 +292,7 @@ AsymCrypt_Return_t AsymCrypt_RSAPublic(AsymCrypt_Handle handle,
         }
     }
 
-    if(status == ASYM_CRYPT_RETURN_SUCCESS)
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {
         pkeStatus = cri_pke_rsa_pub(&gPKEContext, &pke_rsa_key_ctx);
         if (pkeStatus == 0)
@@ -342,7 +342,7 @@ AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
         }
     }
 
-    if(status == ASYM_CRYPT_RETURN_SUCCESS)
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {
 
         if((k == NULL) || (PKE_isBigIntZero(&k[0]) == ASYM_CRYPT_RETURN_SUCCESS))
@@ -372,7 +372,7 @@ AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
 
         /* Mapping the curve parameters as input to curve type */
         status = PKE_getPrimeCurveId(cp, &curveType);
-        if(status == ASYM_CRYPT_RETURN_SUCCESS)
+        if(ASYM_CRYPT_RETURN_SUCCESS == status)
         {
             /* Get curve id based on the cri_ecc_curve_t param set */
             curve = cri_pke_get_curve(curveType);
@@ -443,7 +443,7 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
         }
     }
 
-    if(status == ASYM_CRYPT_RETURN_SUCCESS)
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {
         /* Get the size of input hash */
         size = h[0];
@@ -456,7 +456,7 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
         
         /* Mapping the curve parameters as input to curve type */
         status = PKE_getPrimeCurveId(cp, &curveType);
-        if(status == ASYM_CRYPT_RETURN_SUCCESS)
+        if(ASYM_CRYPT_RETURN_SUCCESS == status)
         {
             /* Get curve id based on the cri_ecc_curve_t param set */
             curve = cri_pke_get_curve(curveType);
@@ -515,11 +515,11 @@ AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPrivate(AsymCrypt_Handle handle,
         }
     }
 
-    if(status == ASYM_CRYPT_RETURN_SUCCESS)
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {      
         /* Mapping the curve parameters as input to curve type */
         status = PKE_getPrimeCurveId(cp, &curveType);
-        if(status == ASYM_CRYPT_RETURN_SUCCESS)
+        if(ASYM_CRYPT_RETURN_SUCCESS == status)
         {
             /* Get curve id based on the cri_ecc_curve_t param set */
             curve = cri_pke_get_curve(curveType);
@@ -566,11 +566,11 @@ AsymCrypt_Return_t AsymCrypt_ECDSAKeyGenPublic(AsymCrypt_Handle handle,
         }
     }
 
-    if(status == ASYM_CRYPT_RETURN_SUCCESS)
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {      
         /* Mapping the curve parameters as input to curve type */
         status = PKE_getPrimeCurveId(cp, &curveType);
-        if(status == ASYM_CRYPT_RETURN_SUCCESS)
+        if(ASYM_CRYPT_RETURN_SUCCESS == status)
         {
             /* Get curve id based on the cri_ecc_curve_t param set */
             curve = cri_pke_get_curve(curveType);
@@ -653,7 +653,7 @@ AsymCrypt_Return_t AsymCrypt_EddsaSign(AsymCrypt_Handle handle,
             }
         }
 
-        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+        if (ASYM_CRYPT_RETURN_SUCCESS == status) {
             /* Copy k1 || M into data input */
             ptrdataInput += key_len;
             memcpy(ptrdataInput, k1, key_len);
@@ -662,7 +662,7 @@ AsymCrypt_Return_t AsymCrypt_EddsaSign(AsymCrypt_Handle handle,
             status = shaCbFxn(ptrdataInput, (dataSizeByte + key_len), r);
         }
 
-        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+        if (ASYM_CRYPT_RETURN_SUCCESS == status) {
             /* Get 'R' value of signature */
             pkeStatus = cri_pke_eddsa_sign_phase1(gPKE, curve, r, k0, sig->R);
             if (pkeStatus == 0) {
@@ -672,7 +672,7 @@ AsymCrypt_Return_t AsymCrypt_EddsaSign(AsymCrypt_Handle handle,
             }
         }
 
-        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+        if (ASYM_CRYPT_RETURN_SUCCESS == status) {
             /* Get SHA-512 Hash(sig.R||pubKey||msg) */
             ptrdataInput =  (uint8_t*)(ptrData - hash_len);
             memcpy(&ptrdataInput[0], sig->R, key_len);
@@ -680,7 +680,7 @@ AsymCrypt_Return_t AsymCrypt_EddsaSign(AsymCrypt_Handle handle,
             status = shaCbFxn(ptrdataInput, (dataSizeByte + (2U*key_len)), hash);
         }
 
-        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+        if (ASYM_CRYPT_RETURN_SUCCESS == status) {
             /* Get 'S' value of signature */
             pkeStatus = cri_pke_eddsa_sign_phase2(gPKE, curve, hash, sig->s);
         }
@@ -746,7 +746,7 @@ AsymCrypt_Return_t AsymCrypt_EddsaVerify(AsymCrypt_Handle handle,
         /*Restore back 64 Bytes from tempBuff*/
         memcpy(ptrdataInput, tempBuff, hash_len);
 
-        if (status == ASYM_CRYPT_RETURN_SUCCESS) {
+        if (ASYM_CRYPT_RETURN_SUCCESS == status) {
             pkeStatus = cri_pke_eddsa_verify(gPKE, curve, pubKey, hash512, curvelen, sig->R, sig->s, signatureRPrime);
 
             if (pkeStatus == 0) {
@@ -834,6 +834,52 @@ AsymCrypt_Return_t AsymCrypt_EddsaGetPubKey(AsymCrypt_Handle handle,
         status  = ASYM_CRYPT_RETURN_SUCCESS;
     } else {
         status  = ASYM_CRYPT_RETURN_FAILURE;
+    }
+
+    return (status);
+}
+
+AsymCrypt_Return_t AsymCrypt_EcdhGenSharedSecret(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp,
+                        const uint32_t priv[ECDSA_MAX_LENGTH],
+                        const struct AsymCrypt_ECPoint *pubKey,
+                        struct AsymCrypt_ECPoint *ecShSecret)
+{
+    AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
+    int pkeStatus = -1;
+    uint32_t curveType = 0;
+    cri_ecc_curve_t curve;
+    uint32_t size = cp->prime[0];
+
+    /* check sizes */
+    if ((!((size <= 2U) || (size > (ECDSA_MAX_LENGTH - 1U)) ||
+           (size != cp->order[0]) || (size < cp->a[0]) ||
+           (size < cp->b[0]) || (size < cp->g.x[0]) ||
+           (size < cp->g.y[0])  || (size < pubKey->x[0]) ||
+           (size < pubKey->y[0]) || (size < priv[0])))) {
+        /* Checking handle is opened or not */
+        if (NULL != handle) {
+            status = ASYM_CRYPT_RETURN_SUCCESS;
+        }
+    }
+
+    if (ASYM_CRYPT_RETURN_SUCCESS == status) {
+        /* Mapping the curve parameters as input to curve type */
+        status = PKE_getPrimeCurveId(cp, &curveType);
+        if (ASYM_CRYPT_RETURN_SUCCESS == status) {
+            /* Get curve id based on the cri_ecc_curve_t param set */
+            curve = cri_pke_get_curve(curveType);
+
+            /* Get signature */
+            pkeStatus = cri_pke_ecdh(gPKE, curve, &priv[1U], &pubKey->x[1U], &ecShSecret->x[1U]);
+            ecShSecret->x[0] = pubKey->x[0];
+
+            if (0 == pkeStatus) {
+                status  = ASYM_CRYPT_RETURN_SUCCESS;
+            } else {
+                status  = ASYM_CRYPT_RETURN_FAILURE;
+            }
+        }
     }
 
     return (status);

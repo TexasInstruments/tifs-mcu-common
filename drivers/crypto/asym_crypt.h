@@ -503,6 +503,25 @@ AsymCrypt_Return_t AsymCrypt_EddsaVerify(AsymCrypt_Handle handle,
                             const struct AsymCrypt_EddsaSig *sig,
                             AsymCrypt_EdCurveType_t input_curve);
 
+/**
+ * \brief ECDSA verify primitive function
+ *
+ * \param handle  			        [in]  #AsymCrypt_Handle returned from #AsymCrypt_open()
+ * \param cp                        [in]  EC curve parameters
+ * \param priv                      [in]  EC Private key
+ * \param pubKey                    [in]  EC Public key
+ * \param ecShSecret                [out] EC Shared Secret key
+ * 
+ * \return                  #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
+ *                          #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
+ */
+
+AsymCrypt_Return_t AsymCrypt_EcdhGenSharedSecret(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPrimeCurveP *cp,
+                        const uint32_t priv[ECDSA_MAX_LENGTH],
+                        const struct AsymCrypt_ECPoint *pubKey,
+                        struct AsymCrypt_ECPoint *ecShSecret);
+
 #ifdef __cplusplus
 }
 #endif
