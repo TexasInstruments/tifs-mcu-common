@@ -99,6 +99,8 @@ extern "C"
 #define HSM_MSG_FW_UPDATE_CODE_VERIFY            (0x9043)
 /** @brief Veriy RoT Switching Certificate Service type ID*/
 #define HSM_MSG_VERIFY_ROT_CERT                  (0x9044)
+/** @brief Update Key Revision Service type ID*/
+#define HSM_MSG_UPDATE_KEY_REV                   (0x9045)
 /* message flags */
 /**
  * @brief

@@ -2032,7 +2032,7 @@ int32_t HsmClient_VerifyROTSwitchingCertificate(HsmClient_t *HsmClient,
     int32_t status;
     uint16_t crcArgs;
 
-    /*populate the send message structure */
+    /* populate the send message structure */
     HsmClient->ReqMsg.destClientId = HSM_CLIENT_ID_1;
     HsmClient->ReqMsg.srcClientId = HsmClient->ClientId;
 
@@ -2048,17 +2048,16 @@ int32_t HsmClient_VerifyROTSwitchingCertificate(HsmClient_t *HsmClient,
     HsmClient->ReqMsg.args = (void *)(uintptr_t)SOC_virtToPhy(cert);
 
     /*
-    Write back the debug cert and
+    Write back the RoT cert and
     invalidate the cache before passing it to HSM
     */
     CacheP_wbInv(cert, GET_CACHE_ALIGNED_SIZE(cert_size), CacheP_TYPE_ALL);
 
     status = HsmClient_SendAndRecv(HsmClient, timeout);
-    if (status == SystemP_SUCCESS)
-    {
+    if (SystemP_SUCCESS == status) {
         /* the RoT Switch has been populated by HSM server
          * if this request has been processed correctly */
-        if (HsmClient->RespFlag == HSM_FLAG_NACK)
+        if (HSM_FLAG_NACK == HsmClient->RespFlag)
         {
             DebugP_log("\r\n [HSM_CLIENT] RoT Switching Certificate Verification request NACKed by HSM server\r\n");
             status = SystemP_FAILURE;
@@ -2083,8 +2082,7 @@ int32_t HsmClient_VerifyROTSwitchingCertificate(HsmClient_t *HsmClient,
         }
     }
     /* If failure occur due to some reason */
-    else if (status == SystemP_FAILURE)
-    {
+    else if (SystemP_FAILURE == status) {
         status = SystemP_FAILURE;
     }
     /* Indicate timeout error */
@@ -2094,3 +2092,54 @@ int32_t HsmClient_VerifyROTSwitchingCertificate(HsmClient_t *HsmClient,
     }
     return status;
 }
+
+int32_t HsmClient_UpdateKeyRevsion(HsmClient_t *HsmClient, uint32_t timeout) {
+    /* make the message */
+    int32_t status;
+    uint16_t crcArgs;
+
+    /* populate the send message structure */
+    HsmClient->ReqMsg.destClientId = HSM_CLIENT_ID_1;
+    HsmClient->ReqMsg.srcClientId = HsmClient->ClientId;
+
+    /* Always expect acknowledgement from HSM server */
+    HsmClient->ReqMsg.flags = HSM_FLAG_AOP;
+    HsmClient->ReqMsg.serType = HSM_MSG_UPDATE_KEY_REV;
+
+    /* Add arg crc */
+    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)NULL, 0U);
+
+    /* Change the Arguments Address in Physical Address */
+    HsmClient->ReqMsg.args = NULL;
+
+    status = HsmClient_SendAndRecv(HsmClient, timeout);
+
+    if (SystemP_SUCCESS == status) {
+        /* the verifyApp has been populated by HSM server
+        * if this request has been processed correctly */
+        if (HSM_FLAG_NACK == HsmClient->RespFlag) {
+            DebugP_log("\r\n [HSM_CLIENT] Update Key Revision request NACKed by HSM server\r\n");
+            status = SystemP_FAILURE;
+        } else {
+            /* Change the Arguments Address in Physical Address */
+            HsmClient->RespMsg.args = (void *)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
+
+            /* check the integrity of args */
+            crcArgs = crc16_ccit((uint8_t *)(HsmClient->RespMsg.args),0);
+            if (crcArgs == HsmClient->RespMsg.crcArgs) {
+                status = SystemP_SUCCESS;
+            } else {
+                DebugP_log("\r\n [HSM_CLIENT] CRC check for update key revision response failed \r\n");
+                status = SystemP_FAILURE;
+            }
+        }
+    } else if (SystemP_FAILURE == status) {
+        /* If failure occur due to some reason */
+        status = SystemP_FAILURE;
+    } else {
+        /* Indicate timeout error */
+        status = SystemP_TIMEOUT;
+    }
+    return status;
+}
+

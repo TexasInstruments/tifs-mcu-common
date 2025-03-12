@@ -799,8 +799,7 @@ int32_t HsmClient_getVersion(HsmClient_t *HsmClient ,
 
     /**
      * @brief
-     *  service request issued to HSM server to perform RoT Switching which changes the root of trust key from
-     *  secondary keys to back up keys.
+     *  service request issued to HSM server to validate RoT Switching Certificate
      *
      * @param timeout           [IN] amount of time to block waiting for
      * semaphore to be available, in units of system ticks (see KERNEL_DPL_CLOCK_PAGE)
@@ -817,6 +816,23 @@ int32_t HsmClient_getVersion(HsmClient_t *HsmClient ,
                                   uint8_t *cert,
                                   uint32_t cert_size,
                                   uint32_t timeout);
+
+    /**
+     * @brief
+     *  service request issued to HSM server to update key revision to 0x2 which changes the root of trust key from
+     *  secondary keys to back up keys.
+     *
+     * @param timeout           [IN] amount of time to block waiting for
+     * semaphore to be available, in units of system ticks (see KERNEL_DPL_CLOCK_PAGE)
+     * @param HsmClient         [IN] Client object which is using this RoT Switching API.
+     *
+     * @return
+     * 1. SystemP_SUCCESS if returns successfully
+     * 2. SystemP_FAILURE if NACK message is received or client id not registered.
+     * 3. SystemP_TIMEOUT if timeout exception occours.
+     */
+    int32_t HsmClient_UpdateKeyRevsion(HsmClient_t *HsmClient,
+                                       uint32_t timeout);
     /** @} */
 
 #ifdef __cplusplus
