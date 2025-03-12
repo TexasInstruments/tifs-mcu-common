@@ -307,6 +307,56 @@ extern "C"
     } FirmwareUpdateReq_t;
 
 
+/**
+ * @brief
+ * This is the OTFA Region structure which holds individual region specific information to be written to corresponding OTFA registers.
+ * In AM263Px and AM261x, there are 4 OTFA regions
+ */
+typedef struct OTFA_Region_t
+{
+    uint8_t   authMode ;         /* mode of authentication - disable-0/GMAC-1/CMAC-2 ; */
+    uint8_t   encMode ;          /* mode of decryption - disable-0 or AES_CTR-1 */
+    uint16_t  reservedArea ;     /* reserved to align with 4kB structure */
+    uint32_t  regionStAddr ;     /* start address of the flash region for which the configuration should apply */
+    uint32_t  regionSize ;       /* size of the flash region in kB for which the configuration should apply */
+    uint8_t   authKeyID ;        /* Keyring ID of key to be used for authentication */    
+    uint8_t   encrKeyID ;        /* Keyring ID of key to be used for encryption */
+    uint8_t   encrKeyFetchMode ; /* specify which 16 bytes of DSMEK are to be used - 1 for fist 16/2 for last 16/ 3 for XOR of both */
+    uint8_t   authAesKey [16] ;  /* actual key value to be written to the register for authentication ; fetched from keyring */
+    uint8_t   encrAesKey [16] ;  /* actual key value to be written to the register for decryption ; fetched from keyring */
+    uint8_t   regionIV[16] ;     /* IV to be used for encryption */
+}OTFA_Region_t ;
+
+/**
+ * @brief
+ * This is the OTFA Region structure which holds individual region specific information to be read from OTFA registers.
+ */
+typedef struct OTFA_readRegion_t
+{
+    uint8_t   regionNumber ;    /* Index of the region - 0/1/2/3 */
+    uint8_t   authMode ;        /* mode of authentication - disable-0/GMAC-1/CMAC-2 ; */
+    uint8_t   encMode ;         /* mode of decryption - disable-0 or AES_CTR-1 */
+    uint8_t   authKeyHash[64] ; /* hash of the authentication key stored in OTFA register */
+    uint8_t   encKeyHash[64] ;  /* hash of the encryption key stored in OTFA register */
+    uint32_t  regionStAddr ;    /* start address of the flash region for which the configuration should apply */
+    uint32_t  regionSize ;      /* size of the flash region in kB for which the configuration should apply */
+    uint16_t  regionIV[16] ;    /* IV to be used for encryption */
+}OTFA_readRegion_t ;
+
+/**
+ * @brief
+ * This is the entire OTFA structure which holds all regions' information 
+ * 4 regions in AM263Px and AM261x
+ */
+typedef struct OTFA_Config_t
+{
+    OTFA_Region_t  OTFA_Reg[4] ;    /* array of all registers' information of 4 OTFA Regions */
+    uint8_t        numRegions ;     /* number of OTFA regions to be configured */
+    uint8_t        keySize   ;      /* options - 128/256 */
+    uint8_t        macSize   ;      /* options - 4/8/12/16 */
+    uint8_t        masterEnable ;   /* specifies whether OTFA IP has to be enabled/disabled ; 0 or 1 */
+}OTFA_Config_t ;
+
     /**
      * @brief
      * This API waits for HSMRT load if requested
@@ -834,6 +884,36 @@ int32_t HsmClient_getVersion(HsmClient_t *HsmClient ,
     int32_t HsmClient_UpdateKeyRevsion(HsmClient_t *HsmClient,
                                        uint32_t timeout);
     /** @} */
+
+/**
+ *  @brief  Client request to configure the OTFA regions
+ *
+ *  @param  HsmClient        [IN] HsmClient object
+ *  @param  OTFA_ConfigInfo
+ * 
+ * @return
+ * 1. SystemP_SUCCESS if returns successfully
+ * 2. SystemP_FAILURE if NACK message is received or client id not registered.
+ */
+int32_t HsmClient_configOTFARegions(HsmClient_t* HsmClient,
+                                        OTFA_Config_t* OTFA_ConfigInfo,
+                                        uint32_t timeout);
+
+/**
+ *  @brief  Client request to read the OTFA regions
+ *
+ *  @param  HsmClient        [IN] HsmClient object
+ *  @param  OTFA_ConfigInfo
+ * 
+ * @return
+ * 1. SystemP_SUCCESS if reading done successfully
+ * 2. SystemP_FAILURE if NACK message is received or client id not registered.
+ */
+int32_t HsmClient_readOTFARegions(HsmClient_t* HsmClient,
+                                        OTFA_readRegion_t* OTFA_readRegion,
+                                        uint32_t timeout);
+
+/** @} */
 
 #ifdef __cplusplus
 }

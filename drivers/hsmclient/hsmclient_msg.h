@@ -101,7 +101,12 @@ extern "C"
 #define HSM_MSG_VERIFY_ROT_CERT                  (0x9044)
 /** @brief Update Key Revision Service type ID*/
 #define HSM_MSG_UPDATE_KEY_REV                   (0x9045)
+/** @brief Configure OTFA service ID*/
+#define HSM_MSG_CONFIGURE_OTFA                   (0x9056)
+/** @brief Read OTFA service ID*/
+#define HSM_MSG_READ_OTFA                        (0x9057)
 /* message flags */
+
 /**
  * @brief
  *  HSM FLAG used by HSM client to indicate that it expects

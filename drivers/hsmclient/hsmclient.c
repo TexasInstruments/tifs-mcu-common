@@ -445,7 +445,7 @@ int32_t HsmClient_register(HsmClient_t *HsmClient, uint8_t clientId)
 
     if (HsmClient == NULL)
     {
-        DebugP_log(" \r\n [HSM_CLIENT] HsmCliet_t type error. \r\n");
+        DebugP_log(" \r\n [HSM_CLIENT] HsmClient_t type error. \r\n");
         return SystemP_FAILURE;
     }
     else
@@ -2138,6 +2138,143 @@ int32_t HsmClient_UpdateKeyRevsion(HsmClient_t *HsmClient, uint32_t timeout) {
         status = SystemP_FAILURE;
     } else {
         /* Indicate timeout error */
+        status = SystemP_TIMEOUT;
+    }
+    return status;
+}
+
+
+int32_t HsmClient_configOTFARegions(HsmClient_t* HsmClient,OTFA_Config_t* OTFA_ConfigInfo,uint32_t timeout)
+{
+    /* make the message */
+    int32_t status ;
+    uint16_t crcArgs;
+
+    /*populate the send message structure */
+    HsmClient->ReqMsg.destClientId = HSM_CLIENT_ID_1;
+    HsmClient->ReqMsg.srcClientId = HsmClient->ClientId;
+
+    /* Always expect acknowledgement from HSM server */
+    HsmClient->ReqMsg.flags = HSM_FLAG_AOP;
+    HsmClient->ReqMsg.serType = HSM_MSG_CONFIGURE_OTFA;
+
+    /* Add arg crc */
+    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t*)OTFA_ConfigInfo,sizeof(OTFA_Config_t));
+
+    /* Change the Arguments Address in Physical Address */
+    HsmClient->ReqMsg.args = (void*)(uintptr_t)SOC_virtToPhy(OTFA_ConfigInfo);
+
+    /*
+       Write back the OTFA_ConfigInfo struct and
+       invalidate the cache before passing it to HSM
+    */
+    CacheP_wbInv(OTFA_ConfigInfo, GET_CACHE_ALIGNED_SIZE(sizeof(OTFA_Config_t)), CacheP_TYPE_ALL);
+
+    status = HsmClient_SendAndRecv(HsmClient,timeout);
+
+    if(status == SystemP_SUCCESS)
+    {
+        /* the hsmVer has been populated by HSM server
+         * if this request has been processed correctly */
+        if(HsmClient->RespFlag == HSM_FLAG_NACK)
+        {
+            DebugP_log("\r\n [HSM_CLIENT] Configure OTFA request NACKed by HSM server\r\n");
+            status = SystemP_FAILURE;
+        }
+        else
+        {
+            /* Change the Arguments Address in Physical Address */
+            HsmClient->RespMsg.args = (void*)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
+
+            /* check the integrity of args */
+            crcArgs = crc16_ccit((uint8_t*)(HsmClient->RespMsg.args),sizeof(OTFA_Config_t));
+            if(crcArgs == HsmClient->RespMsg.crcArgs)
+            {
+                status = SystemP_SUCCESS;
+            }
+            else
+            {
+                DebugP_log("\r\n [HSM_CLIENT] CRC check for OTFA_configuration response failed \r\n");
+                status = SystemP_FAILURE ;
+            }
+        }
+    }
+    /* If failure occur due to some reason */
+    else if (status == SystemP_FAILURE)
+    {
+        status = SystemP_FAILURE;
+    }
+    /* Indicate timeout error */
+    else
+    {
+        status = SystemP_TIMEOUT;
+    }
+    return status;
+}
+
+int32_t HsmClient_readOTFARegions(HsmClient_t* HsmClient,OTFA_readRegion_t* OTFA_readRegion,uint32_t timeout)
+{
+    /* make the message */
+    int32_t status ;
+    uint16_t crcArgs;
+
+    /*populate the send message structure */
+    HsmClient->ReqMsg.destClientId = HSM_CLIENT_ID_1;
+    HsmClient->ReqMsg.srcClientId = HsmClient->ClientId;
+
+    /* Always expect acknowledgement from HSM server */
+    HsmClient->ReqMsg.flags = HSM_FLAG_AOP;
+    HsmClient->ReqMsg.serType = HSM_MSG_READ_OTFA;
+
+    /* Add arg crc */
+    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t*)OTFA_readRegion,sizeof(OTFA_readRegion_t));
+
+    /* Change the Arguments Address in Physical Address */
+    HsmClient->ReqMsg.args = (void*)(uintptr_t)SOC_virtToPhy(OTFA_readRegion);
+
+    /*
+       Write back the OTFA_readRegion struct and
+       invalidate the cache before passing it to HSM
+    */
+    CacheP_wbInv(OTFA_readRegion, GET_CACHE_ALIGNED_SIZE(sizeof(OTFA_readRegion_t)), CacheP_TYPE_ALL);
+
+    status = HsmClient_SendAndRecv(HsmClient,timeout);
+
+    if(status == SystemP_SUCCESS)
+    {
+        /* the hsmVer has been populated by HSM server
+         * if this request has been processed correctly */
+        if(HsmClient->RespFlag == HSM_FLAG_NACK)
+        {
+            DebugP_log("\r\n [HSM_CLIENT] Read OTFA request NACKed by HSM server\r\n");
+            status = SystemP_FAILURE;
+        }
+        else
+        {
+            /* Change the Arguments Address in Physical Address */
+            HsmClient->RespMsg.args = (void*)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
+
+            /* check the integrity of args */
+            crcArgs = crc16_ccit((uint8_t*)(HsmClient->RespMsg.args),sizeof(OTFA_readRegion_t));
+            if(crcArgs == HsmClient->RespMsg.crcArgs)
+            {
+                status = SystemP_SUCCESS;
+            }
+            else
+            {
+                DebugP_log("\r\n [HSM_CLIENT] CRC check for OTFA_read response failed \r\n");
+                status = SystemP_FAILURE ;
+            }
+        }
+    }
+    /* If failure occur due to some reason */
+    else if (status == SystemP_FAILURE)
+    {
+        status = SystemP_FAILURE;
+    }
+    /* Indicate timeout error */
+    else
+    {
         status = SystemP_TIMEOUT;
     }
     return status;
