@@ -219,7 +219,7 @@ AsymCrypt_Return_t AsymCrypt_RSAPrivate(AsymCrypt_Handle handle,
     int pkeStatus = -1;
     uint32_t pubmod_bitsize = k->n[0]*4U;
     uint32_t exp_size = k->e[0]*4U;
-    uint32_t size = k->p[0];
+    uint32_t size = (k->d[0])/2U;
 
     struct cri_rsa_key pke_rsa_key_ctx = {
         .bits = (pubmod_bitsize*8U),
@@ -235,8 +235,7 @@ AsymCrypt_Return_t AsymCrypt_RSAPrivate(AsymCrypt_Handle handle,
 
     /* check sizes, sizes of s and n must match. */
     if ((!((size <= 1U) || (size > ((RSA_MAX_LENGTH - 1U) >> 1)) ||
-           (k->q[0] > size) || (k->dp[0] > size) || (k->dq[0] > size) ||
-           (k->coefficient[0] > size) || (m[0] > (size * 2U)))))
+        (m[0] > (size * 2U)))))
     {
         /* Checking handle is opened or not */
         if(NULL != handle)
@@ -244,6 +243,7 @@ AsymCrypt_Return_t AsymCrypt_RSAPrivate(AsymCrypt_Handle handle,
             status = ASYM_CRYPT_RETURN_SUCCESS;
         }
     }
+
     if(ASYM_CRYPT_RETURN_SUCCESS == status)
     {
         pkeStatus = cri_pke_rsa_sign(&gPKEContext, &pke_rsa_key_ctx);
@@ -307,6 +307,88 @@ AsymCrypt_Return_t AsymCrypt_RSAPublic(AsymCrypt_Handle handle,
         {
             status  = ASYM_CRYPT_RETURN_FAILURE;
         }
+    }
+
+    return (status);
+}
+
+AsymCrypt_Return_t AsymCrypt_RSAKeyGenPrivate(AsymCrypt_Handle handle,
+                    struct AsymCrypt_RSAPrivkey *k,
+                    uint32_t keybitsize)
+{
+    AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
+    int pkeStatus = -1;
+    uint32_t pubmod_bitsize = keybitsize;
+    uint32_t exp_size = k->e[0]*4U;
+    uint32_t size = (keybitsize/(8U*4U));
+
+    struct cri_rsa_key pke_rsa_key_ctx = {
+        .bits = pubmod_bitsize,
+        .flags = 0,
+        .n = (uint8_t *)&k->n[1],
+        .e = (uint8_t *)&k->e[1],
+        .elength = exp_size,
+        .d1 = (uint8_t *)&k->d[1],
+        .d2 = NULL,
+        .message = NULL,
+        .signature = NULL
+    };
+
+    /* check sizes, sizes of s and n must match. */
+    if (!((size <= 1U) || (size > (RSA_MAX_LENGTH - 1U))))
+    {
+        /* Checking handle is opened or not */
+        if(NULL != handle)
+        {
+            status = ASYM_CRYPT_RETURN_SUCCESS;
+        }
+    }
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
+    {
+        pkeStatus = cri_pke_rsa_key_gen(&gPKEContext, &pke_rsa_key_ctx);
+        if (pkeStatus == 0)
+        {
+            k->n[0] = size;
+            k->d[0] = size;
+            status  = ASYM_CRYPT_RETURN_SUCCESS;
+        }
+        else
+        {
+            status  = ASYM_CRYPT_RETURN_FAILURE;
+        }
+    }
+
+    return (status);
+}
+
+AsymCrypt_Return_t AsymCrypt_RSAKeyGenPublic(AsymCrypt_Handle handle,
+                    const struct AsymCrypt_RSAPrivkey *privKey,
+                    struct AsymCrypt_RSAPubkey *pubKey,
+                    uint32_t keybitsize)
+{
+    AsymCrypt_Return_t status  = ASYM_CRYPT_RETURN_FAILURE;
+    uint32_t size = (keybitsize/(8U*4U));
+
+    /* check sizes, sizes of s and n must match. */
+    if (!((size <= 1U) || (size > (RSA_MAX_LENGTH - 1U))))
+    {
+        /* Checking handle is opened or not */
+        if(NULL != handle)
+        {
+            status = ASYM_CRYPT_RETURN_SUCCESS;
+        }
+    }
+
+    if(ASYM_CRYPT_RETURN_SUCCESS == status)
+    {
+        /* Copy the RSA modulus i.e. n from the Private Key */
+        memcpy(&pubKey->n[1U], &privKey->n[1U], privKey->n[0U]*4U);
+
+        /* Copy the RSA exponent i.e. e from the Public Key */
+        memcpy(&pubKey->e[1U], &privKey->e[1U], privKey->e[0U]*4U);
+
+        pubKey->n[0U] = privKey->n[0U];
+        pubKey->e[0U] = privKey->e[0U];
     }
 
     return (status);

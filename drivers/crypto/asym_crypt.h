@@ -357,7 +357,10 @@ AsymCrypt_Return_t AsymCrypt_close(AsymCrypt_Handle handle);
  * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
  *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
  */
-AsymCrypt_Return_t AsymCrypt_RSAPrivate(AsymCrypt_Handle handle, const uint32_t m[RSA_MAX_LENGTH], const struct AsymCrypt_RSAPrivkey *k, uint32_t result[RSA_MAX_LENGTH]);
+AsymCrypt_Return_t AsymCrypt_RSAPrivate(AsymCrypt_Handle handle,
+                    const uint32_t m[RSA_MAX_LENGTH],
+                    const struct AsymCrypt_RSAPrivkey *k,
+                    uint32_t result[RSA_MAX_LENGTH]);
 
 /**
  * \brief This Function performs Encryption or Verification operations
@@ -372,7 +375,43 @@ AsymCrypt_Return_t AsymCrypt_RSAPrivate(AsymCrypt_Handle handle, const uint32_t 
  * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
  *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
  */
-AsymCrypt_Return_t AsymCrypt_RSAPublic(AsymCrypt_Handle handle, const uint32_t m[RSA_MAX_LENGTH], const struct AsymCrypt_RSAPubkey *k, uint32_t result[RSA_MAX_LENGTH]);
+AsymCrypt_Return_t AsymCrypt_RSAPublic(AsymCrypt_Handle handle,
+                    const uint32_t m[RSA_MAX_LENGTH],
+                    const struct AsymCrypt_RSAPubkey *k,
+                    uint32_t result[RSA_MAX_LENGTH]);
+
+/**
+ * \brief This Function performs Encryption or Verification operations
+ *
+ * \param  handle  #AsymCrypt_Handle returned from #AsymCrypt_open()
+ * 
+ * \param k           RSA private key
+ * \param keybitsize  Result of the operation in bigint format. caller must allocate
+ *                    the same memory as s and n for this array.
+ *
+ * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
+ *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
+ */
+AsymCrypt_Return_t AsymCrypt_RSAKeyGenPrivate(AsymCrypt_Handle handle,
+                    struct AsymCrypt_RSAPrivkey *k,
+                    uint32_t keybitsize);
+
+/**
+ * \brief This Function performs Encryption or Verification operations
+ *
+ * \param  handle  #AsymCrypt_Handle returned from #AsymCrypt_open()
+ * \param privKey     RSA private key 
+ * \param pubKey      RSA public key
+ * \param keybitsize  Result of the operation in bigint format. caller must allocate
+ *                    the same memory as s and n for this array.
+ *
+ * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
+ *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
+ */
+AsymCrypt_Return_t AsymCrypt_RSAKeyGenPublic(AsymCrypt_Handle handle,
+                    const struct AsymCrypt_RSAPrivkey *privKey,
+                    struct AsymCrypt_RSAPubkey *pubKey,
+                    uint32_t keybitsize);
 
 /**
  * \brief ECDSA sign primitive function
