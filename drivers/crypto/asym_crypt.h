@@ -135,11 +135,16 @@ typedef void *AsymCrypt_Handle;
 /** Eddsa Key length in Bytes */
 #define EDDSA_MAX_KEY_LEN                   (57U)
 
+/** Ed25519 Key length in Bytes */
 #define EDDSA_ED25519_KEY_LEN              (32U)
+
+/** Ed448 Key length in Bytes */
 #define EDDSA_ED448_KEY_LEN                (57U)
 
-/** Eddsa Hash length in Bytes */
+/** Ed25519 Hash length in Bytes */
 #define EDDSA_ED25519_HASH_LEN             (64U)
+
+/** Ed448 Hash length in Bytes */
 #define EDDSA_ED448_HASH_LEN               (114U)
 
 /* ========================================================================== */
