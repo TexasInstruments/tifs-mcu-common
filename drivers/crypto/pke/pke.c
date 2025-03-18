@@ -177,6 +177,9 @@ AsymCrypt_Handle AsymCrypt_open(uint32_t index)
     gPKEContext.copy_flags = 0U;
     gPKEContext.resp_flags = 0U;
 
+    /* Flush all the errors and clears the memories of PKE RAM */
+    (void)cri_pke_flush(&gPKEContext);
+
     gPKE = cri_pke_open(&gPKEContext);
     if(gPKE == NULL)
     {
