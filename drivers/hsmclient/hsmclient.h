@@ -883,7 +883,6 @@ int32_t HsmClient_getVersion(HsmClient_t *HsmClient ,
      */
     int32_t HsmClient_UpdateKeyRevsion(HsmClient_t *HsmClient,
                                        uint32_t timeout);
-    /** @} */
 
 /**
  *  @brief  Client request to configure the OTFA regions
@@ -904,7 +903,7 @@ int32_t HsmClient_configOTFARegions(HsmClient_t* HsmClient,
  *  @brief  Client request to read the OTFA regions
  *
  *  @param  HsmClient        [IN] HsmClient object
- *  @param  OTFA_ConfigInfo  [IN] OTFA Config Info
+ *  @param  OTFA_readRegion  [IN] OTFA Read Region
  *  @param  timeout          [IN] timeout
  * 
  * @return
