@@ -889,7 +889,8 @@ int32_t HsmClient_getVersion(HsmClient_t *HsmClient ,
  *  @brief  Client request to configure the OTFA regions
  *
  *  @param  HsmClient        [IN] HsmClient object
- *  @param  OTFA_ConfigInfo
+ *  @param  OTFA_ConfigInfo  [IN] OTFA Config Info
+ *  @param  timeout          [IN] timeout
  * 
  * @return
  * 1. SystemP_SUCCESS if returns successfully
@@ -903,7 +904,8 @@ int32_t HsmClient_configOTFARegions(HsmClient_t* HsmClient,
  *  @brief  Client request to read the OTFA regions
  *
  *  @param  HsmClient        [IN] HsmClient object
- *  @param  OTFA_ConfigInfo
+ *  @param  OTFA_ConfigInfo  [IN] OTFA Config Info
+ *  @param  timeout          [IN] timeout
  * 
  * @return
  * 1. SystemP_SUCCESS if reading done successfully
