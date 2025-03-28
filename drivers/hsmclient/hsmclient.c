@@ -782,7 +782,7 @@ int32_t HsmClient_importKeyring(HsmClient_t *HsmClient,
 }
 
 int32_t HsmClient_readOTPRow(HsmClient_t *HsmClient,
-                             EfuseRead_t *readRow)
+                             NvmOtpRead_t *readRow)
 {
     /* make the message */
     int32_t status;
@@ -799,13 +799,13 @@ int32_t HsmClient_readOTPRow(HsmClient_t *HsmClient,
     HsmClient->ReqMsg.args = (void *)(uintptr_t)SOC_virtToPhy(readRow);
 
     /* Add arg crc */
-    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)readRow, sizeof(EfuseRead_t));
+    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)readRow, sizeof(NvmOtpRead_t));
 
     /*
        Write back the EfuseRead struct and
        invalidate the cache before passing it to HSM
     */
-    CacheP_wbInv(readRow, GET_CACHE_ALIGNED_SIZE(sizeof(EfuseRead_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv(readRow, GET_CACHE_ALIGNED_SIZE(sizeof(NvmOtpRead_t)), CacheP_TYPE_ALL);
 
     status = HsmClient_SendAndRecv(HsmClient, timeout);
     if (status == SystemP_SUCCESS)
@@ -824,7 +824,7 @@ int32_t HsmClient_readOTPRow(HsmClient_t *HsmClient,
             HsmClient->RespMsg.args = (void *)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
 
             /* check the integrity of args */
-            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(EfuseRead_t));
+            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(NvmOtpRead_t));
             if (crcArgs == HsmClient->RespMsg.crcArgs)
             {
                 status = SystemP_SUCCESS;
@@ -850,7 +850,7 @@ int32_t HsmClient_readOTPRow(HsmClient_t *HsmClient,
 }
 
 int32_t HsmClient_writeOTPRow(HsmClient_t *HsmClient,
-                              EfuseRowWrite_t *writeRow)
+                              NvmOtpRowWrite_t *writeRow)
 {
     /* make the message */
     int32_t status;
@@ -867,13 +867,13 @@ int32_t HsmClient_writeOTPRow(HsmClient_t *HsmClient,
     HsmClient->ReqMsg.args = (void *)(uintptr_t)SOC_virtToPhy(writeRow);
 
     /* Add arg crc */
-    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)writeRow, sizeof(EfuseRowWrite_t));
+    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)writeRow, sizeof(NvmOtpRowWrite_t));
 
     /*
        Write back the EfuseRowWrite struct and
        invalidate the cache before passing it to HSM
     */
-    CacheP_wbInv(writeRow, GET_CACHE_ALIGNED_SIZE(sizeof(EfuseRowWrite_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv(writeRow, GET_CACHE_ALIGNED_SIZE(sizeof(NvmOtpRowWrite_t)), CacheP_TYPE_ALL);
 
     status = HsmClient_SendAndRecv(HsmClient, timeout);
     if (status == SystemP_SUCCESS)
@@ -891,7 +891,7 @@ int32_t HsmClient_writeOTPRow(HsmClient_t *HsmClient,
             HsmClient->RespMsg.args = (void *)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
 
             /* check the integrity of args */
-            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(EfuseRowWrite_t));
+            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(NvmOtpRowWrite_t));
             if (crcArgs == HsmClient->RespMsg.crcArgs)
             {
                 status = SystemP_SUCCESS;
@@ -917,7 +917,7 @@ int32_t HsmClient_writeOTPRow(HsmClient_t *HsmClient,
 }
 
 int32_t HsmClient_lockOTPRow(HsmClient_t *HsmClient,
-                             EfuseRowProt_t *protRow)
+                             NvmOtpRowProt_t *protRow)
 {
     /* make the message */
     int32_t status;
@@ -934,13 +934,13 @@ int32_t HsmClient_lockOTPRow(HsmClient_t *HsmClient,
     HsmClient->ReqMsg.args = (void *)(uintptr_t)SOC_virtToPhy(protRow);
 
     /* Add arg crc */
-    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)protRow, sizeof(EfuseRowProt_t));
+    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)protRow, sizeof(NvmOtpRowProt_t));
 
     /*
        Write back the EfuseRowProt struct and
        invalidate the cache before passing it to HSM
     */
-    CacheP_wbInv(protRow, GET_CACHE_ALIGNED_SIZE(sizeof(EfuseRowProt_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv(protRow, GET_CACHE_ALIGNED_SIZE(sizeof(NvmOtpRowProt_t)), CacheP_TYPE_ALL);
 
     status = HsmClient_SendAndRecv(HsmClient, timeout);
     if (status == SystemP_SUCCESS)
@@ -958,7 +958,7 @@ int32_t HsmClient_lockOTPRow(HsmClient_t *HsmClient,
             HsmClient->RespMsg.args = (void *)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
 
             /* check the integrity of args */
-            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(EfuseRowProt_t));
+            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(NvmOtpRowProt_t));
             if (crcArgs == HsmClient->RespMsg.crcArgs)
             {
                 status = SystemP_SUCCESS;
@@ -984,7 +984,7 @@ int32_t HsmClient_lockOTPRow(HsmClient_t *HsmClient,
 }
 
 int32_t HsmClient_getOTPRowCount(HsmClient_t *HsmClient,
-                                 EfuseRowCount_t *rowCount)
+                                 NvmOtpRowCount_t *rowCount)
 {
     /* make the message */
     int32_t status;
@@ -1001,13 +1001,13 @@ int32_t HsmClient_getOTPRowCount(HsmClient_t *HsmClient,
     HsmClient->ReqMsg.args = (void *)(uintptr_t)SOC_virtToPhy(rowCount);
 
     /* Add arg crc */
-    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)rowCount, sizeof(EfuseRowCount_t));
+    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)rowCount, sizeof(NvmOtpRowCount_t));
 
     /*
        Write back the EfuseRowCount struct and
        invalidate the cache before passing it to HSM
     */
-    CacheP_wbInv(rowCount, GET_CACHE_ALIGNED_SIZE(sizeof(EfuseRowCount_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv(rowCount, GET_CACHE_ALIGNED_SIZE(sizeof(NvmOtpRowCount_t)), CacheP_TYPE_ALL);
 
     status = HsmClient_SendAndRecv(HsmClient, timeout);
     if (status == SystemP_SUCCESS)
@@ -1025,7 +1025,7 @@ int32_t HsmClient_getOTPRowCount(HsmClient_t *HsmClient,
             HsmClient->RespMsg.args = (void *)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
 
             /* check the integrity of args */
-            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(EfuseRowCount_t));
+            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(NvmOtpRowCount_t));
             if (crcArgs == HsmClient->RespMsg.crcArgs)
             {
                 status = SystemP_SUCCESS;
@@ -1051,7 +1051,7 @@ int32_t HsmClient_getOTPRowCount(HsmClient_t *HsmClient,
 }
 
 int32_t HsmClient_getOTPRowProtection(HsmClient_t *HsmClient,
-                                      EfuseRowProt_t *rowProt)
+                                      NvmOtpRowProt_t *rowProt)
 {
     /* make the message */
     int32_t status;
@@ -1068,13 +1068,13 @@ int32_t HsmClient_getOTPRowProtection(HsmClient_t *HsmClient,
     HsmClient->ReqMsg.args = (void *)(uintptr_t)SOC_virtToPhy(rowProt);
 
     /* Add arg crc */
-    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)rowProt, sizeof(EfuseRowProt_t));
+    HsmClient->ReqMsg.crcArgs = crc16_ccit((uint8_t *)rowProt, sizeof(NvmOtpRowProt_t));
 
     /*
        Write back the EfuseRowProt struct and
        invalidate the cache before passing it to HSM
     */
-    CacheP_wbInv(rowProt, GET_CACHE_ALIGNED_SIZE(sizeof(EfuseRowProt_t)), CacheP_TYPE_ALL);
+    CacheP_wbInv(rowProt, GET_CACHE_ALIGNED_SIZE(sizeof(NvmOtpRowProt_t)), CacheP_TYPE_ALL);
 
     status = HsmClient_SendAndRecv(HsmClient, timeout);
     if (status == SystemP_SUCCESS)
@@ -1092,7 +1092,7 @@ int32_t HsmClient_getOTPRowProtection(HsmClient_t *HsmClient,
             HsmClient->RespMsg.args = (void *)SOC_phyToVirt((uint64_t)HsmClient->RespMsg.args);
 
             /* check the integrity of args */
-            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(EfuseRowProt_t));
+            crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(NvmOtpRowProt_t));
             if (crcArgs == HsmClient->RespMsg.crcArgs)
             {
                 status = SystemP_SUCCESS;

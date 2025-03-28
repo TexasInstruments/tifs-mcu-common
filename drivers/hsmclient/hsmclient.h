@@ -120,54 +120,58 @@ extern "C"
 
     /**
      * @brief
-     * This is a EfuseRead type which holds the information
-     * of eFuse row index and row data corresponding to it .
+     * This is an NvmOtpRead type which holds the information
+     * of NvmOtp row index and row data corresponding to it .
+     * For F29H85x, the rowdIdx corresponds to the Flash Offsets.
+     * For AM26x, the rowIdx corresponds to efuse row offsets.
      */
-    typedef struct EfuseRead_t_
+    typedef struct NvmOtpRead_t_
     {
-        uint32_t rowData; /** Points to data retrieved from gp otp registers.*/
-        uint8_t rowIdx;   /** Points index of eFuse row to be read.*/
-        uint8_t rsvd[3];  /** Reserved **/
-    } EfuseRead_t;
+        uint32_t rowData; /** Points to data retrieved from gp otp registers or fw otp region.*/
+        uint16_t rowIdx;  /** Points index of an NvmOtp row to be read.*/
+        uint8_t rsvd[2];  /** Reserved **/
+    } NvmOtpRead_t;
 
     /**
      * @brief
-     * This is a EfuseRowWrite type which holds the information
-     * regarding programming eFuse row.
+     * This is an NvmOtpRowWrite type which holds the information
+     * regarding programming NvmOtp row.
+     * For F29H85x, the rowdIdx corresponds to the Flash Offsets.
+     * For AM26x, the rowIdx corresponds to efuse row offsets.
      */
-    typedef struct EfuseRowWrite_t_
+    typedef struct NvmOtpRowWrite_t_
     {
-        uint32_t rowData;    /** Data to be written in eFuse row **/
-        uint32_t rowBitMask; /** Bit mask to apply to eFuse row data bits **/
-        uint8_t rowIdx;      /** Index of eFuse row. **/
-        uint8_t rsvd[3];     /** Reserved **/
-    } EfuseRowWrite_t;
+        uint32_t rowData;    /** Data to be written in an NvmOtp row **/
+        uint32_t rowBitMask; /** Bit mask to apply to an NvmOtp row data bits **/
+        uint16_t rowIdx;     /** Index of an NvmOtp row. **/
+        uint8_t rsvd[2];     /** Reserved **/
+    } NvmOtpRowWrite_t;
 
     /**
      * @brief
-     * This is a EfuseRowCount type which holds the information
-     * regarding eFuse row count and size of each row in bits.
+     * This is an NvmOtpRowCount type which holds the information
+     * regarding NvmOtp row count and size of each row in bits.
      */
-    typedef struct EfuseRowCount_t_
+    typedef struct NvmOtpRowCount_t_
     {
-        uint32_t rowCount; /** eFuse row count **/
-        uint8_t rowSize;   /** Size of an eFuse row in bits. **/
+        uint32_t rowCount; /** NvmOtp row count **/
+        uint8_t rowSize;   /** Size of an NvmOtp row in bits. **/
         uint8_t rsvd[3];   /** Reserved **/
-    } EfuseRowCount_t;
+    } NvmOtpRowCount_t;
 
     /**
      * @brief
-     * This is a EfuseRowProt type which holds the information
-     * of eFuse row index and protection status corresponding
+     * This is a NvmOtpRowProt type which holds the information
+     * of NvmOtp row index and protection status corresponding
      * to the row index.
+     * This structure is not valid for f29h85x
      */
-    typedef struct EfuseRowProt_t_
+    typedef struct NvmOtpRowProt_t_
     {
-        uint8_t rowidx;    /** Index of eFuse row. **/
-        uint8_t readProt;  /** Read row protection information used in getting or setting an eFuse row protection **/
-        uint8_t writeProt; /** Write row protection information used in getting or setting an eFuse row protection **/
-        uint8_t rsvd[1];   /** Reserved **/
-    } EfuseRowProt_t;
+        uint16_t rowidx;   /** Index of an NvmOtp row. **/
+        uint8_t readProt;  /** Read row protection information used in getting or setting an NvmOtp row protection. **/
+        uint8_t writeProt; /** Write row protection information used in getting or setting an NvmOtp row protection. **/
+    } NvmOtpRowProt_t;
 
     /**
      * @brief
@@ -479,14 +483,14 @@ int32_t HsmClient_getVersion(HsmClient_t *HsmClient ,
      *  based on row index provided as param.
      *
      * @param HsmClient [IN] HsmClient object.
-     * @param readRow   [IN] populates EfuseRead_t struct with rowData
+     * @param readRow   [IN] populates NvmOtpRead_t struct with rowData
      *                       corresponding to rowIdx.
      * @return
      * 1. SystemP_SUCCESS if returns successfully
      * 2. SystemP_FAILURE if NACK message is received or client id not registered.
      */
     int32_t HsmClient_readOTPRow(HsmClient_t *HsmClient,
-                                 EfuseRead_t *readRow);
+                                 NvmOtpRead_t *readRow);
 
     /**
      * @brief
@@ -494,29 +498,29 @@ int32_t HsmClient_getVersion(HsmClient_t *HsmClient ,
      *  OTP efuse row based on row index provided as param.
      *
      * @param HsmClient  [IN] HsmClient object.
-     * @param writeRow   [IN] populates EfuseRowWrite_t struct with rowData
+     * @param writeRow   [IN] populates NvmOtpRowWrite_t struct with rowData
      *                       corresponding to rowIdx.
      * @return
      * 1. SystemP_SUCCESS if returns successfully
      * 2. SystemP_FAILURE if NACK message is received or client id not registered.
      */
     int32_t HsmClient_writeOTPRow(HsmClient_t *HsmClient,
-                                  EfuseRowWrite_t *writeRow);
+                                  NvmOtpRowWrite_t *writeRow);
 
     /**
      * @brief
      *  The service issued to HSM Server sets the protection status bit of
-     *  the specified row to 1.
+     *  the specified row to 1. This API is not valid for F29H85x.
      *
      * @param HsmClient [IN] HsmClient object.
-     * @param rowProt   [IN] Pointer to EfuseRowProt_t struct which contains
+     * @param rowProt   [IN] Pointer to NvmOtpRowProt_t struct which contains
      *                       the row index and row protection status
      * @return
      * 1. SystemP_SUCCESS if returns successfully
      * 2. SystemP_FAILURE if NACK message is received or client id not registered.
      */
     int32_t HsmClient_lockOTPRow(HsmClient_t *HsmClient,
-                                 EfuseRowProt_t *rowProt);
+                                 NvmOtpRowProt_t *rowProt);
 
     /**
      * @brief
@@ -524,29 +528,29 @@ int32_t HsmClient_getVersion(HsmClient_t *HsmClient ,
      *  rows.
      *
      * @param HsmClient [IN] HsmClient object.
-     * @param rowCount  [IN] Pointer to EfuseRowCount_t struct which is
+     * @param rowCount  [IN] Pointer to NvmOtpRowCount_t struct which is
      *                       populated by HSM server with row count and row size
      * @return
      * 1. SystemP_SUCCESS if returns successfully
      * 2. SystemP_FAILURE if NACK message is received or client id not registered.
      */
     int32_t HsmClient_getOTPRowCount(HsmClient_t *HsmClient,
-                                     EfuseRowCount_t *rowCount);
+                                     NvmOtpRowCount_t *rowCount);
 
     /**
      * @brief
      *  The service issued to HSM Server retrieves the extended otp efuse row
-     *  protection status
+     *  protection status. This API is not valid for F29H85x.
      *
      * @param HsmClient [IN] HsmClient object.
-     * @param rowProt  [IN]  Pointer to EfuseRowProt_t struct which is
+     * @param rowProt  [IN]  Pointer to NvmOtpRowProt_t struct which is
      *                       populated by HSM server with row protection status
      * @return
      * 1. SystemP_SUCCESS if returns successfully
      * 2. SystemP_FAILURE if NACK message is received or client id not registered.
      */
     int32_t HsmClient_getOTPRowProtection(HsmClient_t *HsmClient,
-                                          EfuseRowProt_t *rowProt);
+                                          NvmOtpRowProt_t *rowProt);
 
     /**
      * @brief
