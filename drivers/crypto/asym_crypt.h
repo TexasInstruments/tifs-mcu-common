@@ -135,6 +135,9 @@ typedef void *AsymCrypt_Handle;
 /** Eddsa Key length in Bytes */
 #define EDDSA_MAX_KEY_LEN                   (57U)
 
+/** Eddsa Max BigInt length */
+#define EDDSA_MAX_BIGINT_LEN                ASYM_CRYPT_LEN(EDDSA_MAX_KEY_LEN - 1U)
+
 /** Ed25519 Key length in Bytes */
 #define EDDSA_ED25519_KEY_LEN              (32U)
 
@@ -228,6 +231,31 @@ struct AsymCrypt_ECPrimeCurveP {
     uint32_t        a[ASYM_CRYPT_LEN(EC_PARAM_MAXLEN)];
     /** "b" parameter in the equation x^3 + ax + b = y */
     uint32_t        b[ASYM_CRYPT_LEN(EC_PARAM_MAXLEN)];
+    /** Generator point on the Elliptic curve */
+    struct AsymCrypt_ECPoint g;
+};
+
+/**
+ * \brief EC Montogomery curve parameters
+ *
+ * \param prime Prime number for the group
+ * \param order Order of the group
+ * \param cofactor Cofactor of the group
+ * \param A "A" parameter in the equation By^2 = x^3 + Ax^2 +x
+ * \param B "B" parameter in the equation By^2 = x^3 + Ax^2 +x
+ * \param g Generator point on the Elliptic curve
+ */
+struct AsymCrypt_ECMontCurveP {
+    /** Prime number for the group */
+    uint32_t        prime[ASYM_CRYPT_LEN(EC_PARAM_MAXLEN)];
+    /** Order of the group */
+    uint32_t        order[ASYM_CRYPT_LEN(EC_PARAM_MAXLEN)];
+    /** Cofactor of the Elliptic curve */
+    uint32_t        cofactor[ASYM_CRYPT_LEN(EC_PARAM_MAXLEN)];
+    /** "A" parameter in the equation By^2 = x^3 + Ax^2 +x */
+    uint32_t        A[ASYM_CRYPT_LEN(EC_PARAM_MAXLEN)];
+    /** "B" parameter in the equation By^2 = x^3 + Ax^2 +x */
+    uint32_t        B[ASYM_CRYPT_LEN(EC_PARAM_MAXLEN)];
     /** Generator point on the Elliptic curve */
     struct AsymCrypt_ECPoint g;
 };
