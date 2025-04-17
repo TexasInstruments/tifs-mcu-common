@@ -719,26 +719,26 @@ AsymCrypt_Return_t AsymCrypt_EddsaSign(AsymCrypt_Handle handle,
         /* Get private key hash (SHA/SHAKE digest) */
         status = shaCbFxn((uint8_t*)&(key->privKey), key_len, hash);
 
-        /* Copy 1st part of privKey hash */
-        memcpy(k0, hash, key_len);
-
-        /* Copy 2nd part of privKey hash */
-        memcpy(k1, (hash + key_len), key_len);
-
-        /* Copy 1st part of privKey hash, and clamp it */
-        if (input_curve == ASYM_CRYPT_CURVE_TYPE_EDDSA_25519) {
-            k0[0] &= 0xF8;
-            k0[31] &= 0x7F;
-            k0[31] |= 0x40;
-        } else {
-            k0[0] &= 0xFC;
-            k0[31] &= 0x00;
-            for (uint8_t i = 1; i <= 31 ; i++) {
-                k0[i] |= 0x80;
-            }
-        }
-
         if (ASYM_CRYPT_RETURN_SUCCESS == status) {
+            /* Copy 1st part of privKey hash */
+            memcpy(k0, hash, key_len);
+
+            /* Copy 2nd part of privKey hash */
+            memcpy(k1, (hash + key_len), key_len);
+
+            /* Copy 1st part of privKey hash, and clamp it */
+            if (input_curve == ASYM_CRYPT_CURVE_TYPE_EDDSA_25519) {
+                k0[0] &= 0xF8;
+                k0[31] &= 0x7F;
+                k0[31] |= 0x40;
+            } else {
+                k0[0] &= 0xFC;
+                k0[31] &= 0x00;
+                for (uint8_t i = 1; i <= 31 ; i++) {
+                    k0[i] |= 0x80;
+                }
+            }
+
             /* Copy k1 || M into data input */
             ptrdataInput += key_len;
             memcpy(ptrdataInput, k1, key_len);
@@ -772,7 +772,7 @@ AsymCrypt_Return_t AsymCrypt_EddsaSign(AsymCrypt_Handle handle,
 
         /* Copy back data from tempBuf*/
         ptrdataInput =  (uint8_t*)(ptrData - hash_len);
-        memcpy(tempBuf, ptrdataInput, hash_len);
+        memcpy(ptrdataInput, tempBuf, hash_len);
     }
 
     if (pkeStatus == 0) {
@@ -798,7 +798,7 @@ AsymCrypt_Return_t AsymCrypt_EddsaVerify(AsymCrypt_Handle handle,
     uint32_t curvelen = 0;
     uint8_t    *ptrdataInput = NULL;
     uint8_t tempBuff[EDDSA_ED448_HASH_LEN];
-    uint8_t hash512[EDDSA_ED448_HASH_LEN];
+    uint8_t hash[EDDSA_ED448_HASH_LEN];
     int pkeStatus = -1;
     uint32_t hash_len;
     uint32_t key_len;
@@ -826,23 +826,23 @@ AsymCrypt_Return_t AsymCrypt_EddsaVerify(AsymCrypt_Handle handle,
         memcpy(&ptrdataInput[0], sig->R, key_len);
         memcpy(&ptrdataInput[key_len], pubKey, key_len);
 
-        status = shaCbFxn(ptrdataInput, dataSizeByte + (2U*key_len), hash512);
+        status = shaCbFxn(ptrdataInput, dataSizeByte + (2U*key_len), hash);
 
         /*Restore back 64 Bytes from tempBuff*/
         memcpy(ptrdataInput, tempBuff, hash_len);
 
         if (ASYM_CRYPT_RETURN_SUCCESS == status) {
-            pkeStatus = cri_pke_eddsa_verify(gPKE, curve, pubKey, hash512, curvelen, sig->R, sig->s, signatureRPrime);
+            pkeStatus = cri_pke_eddsa_verify(gPKE, curve, pubKey, hash, curvelen, sig->R, sig->s, signatureRPrime);
 
             if (pkeStatus == 0) {
-                /* PKE Ed25519 Verify operation success*/
+                /* PKE Eddsa Verify operation success*/
                 status  = ASYM_CRYPT_RETURN_FAILURE;
 
                 if (memcmp(sig->R, signatureRPrime, key_len) == 0) {
-                    /* PKE Ed25519 Verification Signature matches*/
+                    /* PKE Eddsa Verification Signature matches*/
                     status = ASYM_CRYPT_RETURN_SUCCESS;
                 } else {
-                    /* PKE Ed25519 Verification Signature does not matches*/
+                    /* PKE Eddsa Verification Signature does not matches*/
                     status = ASYM_CRYPT_RETURN_FAILURE;
                 }
             } else {
