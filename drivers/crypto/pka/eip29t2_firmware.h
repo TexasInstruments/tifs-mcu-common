@@ -50,12 +50,12 @@ extern "C"
  * SA2UL PKA firmware version number
  * major, minor, patch (one nibble each)
  */
-#define EIP29T2_FW_VERSION              (0x210UL)
+#define EIP29T2_FW_VERSION              (0x211UL)
 
 /**
  * Length of the firmware binary in words
  */
-#define EIP29T2_FW_IMAGE_LEN_WORDS      (0xA97)
+#define EIP29T2_FW_IMAGE_LEN_WORDS      (0xEA7)
 
 /**
  * PKA firmware data
