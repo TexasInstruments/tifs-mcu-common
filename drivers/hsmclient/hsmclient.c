@@ -294,7 +294,6 @@ static int32_t HsmClient_SendAndRecv(HsmClient_t *HsmClient, uint32_t timeout)
 
     /* Add message crc. Exclude crcMsg argument of HsmMsg_t from crc calculations*/
     HsmClient->ReqMsg.crcMsg = crc16_ccit((uint8_t *)&HsmClient->ReqMsg, (sizeof(HsmMsg_t) - 2));
-    SemaphoreP_constructBinary(&HsmClient->Semaphore, 0);
 
     status = SIPC_sendMsg(CORE_INDEX_HSM, remoteClientId, localClientId,
                           (uint8_t *)&HsmClient->ReqMsg, WAIT_IF_FIFO_FULL);
@@ -459,6 +458,7 @@ int32_t HsmClient_register(HsmClient_t *HsmClient, uint8_t clientId)
     status = SIPC_registerClient(clientId, HsmClient_isr, (void *)HsmClient);
     if (status == SystemP_SUCCESS)
     {
+        SemaphoreP_constructBinary(&HsmClient->Semaphore, 0);
         DebugP_log("\r\n [HSM_CLIENT] New Client Registered with Client Id = %d\r\n ", clientId);
     }
     else
