@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -61,7 +61,7 @@
 #define SA2UL_IS_HMAC(alg)                              ((alg & 0x10u) == 0)
 
 /** \brief Number of items in MCE data array */
-#define SA2UL_MCE_DATA_NUM                              (6)
+#define SA2UL_MCE_DATA_NUM                              (10U)
 
 /** \brief Pack 2 instructions as 3 bytes */
 #define MCE_PACK2(op1, f21, f11, f01, op2, f22, f12, f02) \
@@ -232,6 +232,8 @@
 #define SA2UL_AES_128_KEY_SIZE_IN_BITS                  (128U)
 #define SA2UL_AES_192_KEY_SIZE_IN_BITS                  (192U)
 #define SA2UL_AES_256_KEY_SIZE_IN_BITS                  (256U)
+
+#define SA2UL_AES_GCM_AUTHTAG_SIZE_IN_BYTES             (16U)
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
@@ -412,6 +414,42 @@ static const uint8_t gSa2ulMceAes128Ecb[] =
 };
 
 /*!
+ * \brief Encryption mode control engine instructions for AES-256-GCM encryption
+ */
+static const uint8_t gSa2ulMceAes256GcmEncr[] =
+{
+ 0x88, 0xa9, 0xfe, 0x83, 0x99, 0x7e, 0x58, 0x2e, 0x8a, 0x90, 0x71, 0x41,
+ 0x83, 0x9d, 0x63, 0xaa, 0x0b, 0x7e, 0x9a, 0x78, 0x3a, 0xa3, 0x8b, 0x1e
+};
+
+/*!
+ * \brief Encryption mode control engine instructions for AES-256-GCM decryption
+ */
+static const uint8_t gSa2ulMceAes256GcmDecr[] =
+{
+ 0x88, 0xa9, 0xfe, 0x83, 0x99, 0x7e, 0x58, 0x2e, 0x8a, 0x14, 0x19, 0x07, 
+ 0x83, 0x9d, 0x63, 0xaa, 0x0b, 0x7e, 0x9a, 0x78, 0x3a, 0xa3, 0x8b, 0x1e
+};
+
+/*!
+ * \brief Encryption mode control engine instructions for AES-128-GCM encryption
+ */
+static const uint8_t gSa2ulMceAes128GcmEncr[] =
+{
+ 0x80, 0xa9, 0xfe, 0x83, 0x99, 0x7e, 0x58, 0x2e, 0x0a, 0x90, 0x71, 0x41,
+ 0x83, 0x9d, 0x63, 0xaa, 0x0b, 0x7e, 0x9a, 0x78, 0x3a, 0xa3, 0x8b, 0x1e
+};
+
+/*!
+ * \brief Encryption mode control engine instructions for AES-128-GCM decryption
+ */
+static const uint8_t gSa2ulMceAes128GcmDecr[] =
+{
+ 0x80, 0xa9, 0xfe, 0x83, 0x99, 0x7e, 0x58, 0x2e, 0x0a, 0x14, 0x19, 0x07, 
+ 0x83, 0x9d, 0x63, 0xaa, 0x0b, 0x7e, 0x9a, 0x78, 0x3a, 0xa3, 0x8b, 0x1e
+};
+
+/*!
  * \brief Encryption mode control engine instructions for different modes
  */
 static const SA2UL_MCEData gSa2ulMceDataArray[SA2UL_MCE_DATA_NUM] =
@@ -451,6 +489,30 @@ static const SA2UL_MCEData gSa2ulMceDataArray[SA2UL_MCE_DATA_NUM] =
         0u, 0u, 0u,
         sizeof(gSa2ulMceAes128CbcDecr),
         gSa2ulMceAes128CbcDecr
+    },
+    {
+        /* AES-256-GCM encryption */
+        0u, 4u, 4u,
+        sizeof(gSa2ulMceAes256GcmEncr),
+        gSa2ulMceAes256GcmEncr
+    },
+    {
+        /* AES-256-GCM decryption */
+        0u, 4u, 4u,
+        sizeof(gSa2ulMceAes256GcmDecr),
+        gSa2ulMceAes256GcmDecr
+    },
+    {
+        /* AES-128-GCM encryption */
+        0u, 4u, 4u,
+        sizeof(gSa2ulMceAes128GcmEncr),
+        gSa2ulMceAes128GcmEncr
+    },
+    {
+        /* AES-128-GCM decryption */
+        0u, 4u, 4u,
+        sizeof(gSa2ulMceAes128GcmDecr),
+        gSa2ulMceAes128GcmDecr
     }
 };
 
@@ -461,7 +523,11 @@ enum
     MCE_DATA_ARRAY_INDEX_AES_256_CBC_DECRYPT,
     MCE_DATA_ARRAY_INDEX_AES_128_ECB ,
     MCE_DATA_ARRAY_INDEX_AES_128_CBC_ENCRYPT,
-    MCE_DATA_ARRAY_INDEX_AES_128_CBC_DECRYPT
+    MCE_DATA_ARRAY_INDEX_AES_128_CBC_DECRYPT,
+    MCE_DATA_ARRAY_INDEX_AES_256_GCM_ENCRYPT,
+    MCE_DATA_ARRAY_INDEX_AES_256_GCM_DECRYPT,
+    MCE_DATA_ARRAY_INDEX_AES_128_GCM_ENCRYPT,
+    MCE_DATA_ARRAY_INDEX_AES_128_GCM_DECRYPT
 };
 
 static const uint32_t gSa2ulHashSizeBytes[] =
@@ -1010,6 +1076,7 @@ int32_t SA2UL_contextAlloc(SA2UL_Handle handle, SA2UL_ContextObject *ctxObj, con
     int32_t mcDataIndex;
     uint8_t aesKeyInvFlag;
     uint64_t authLen;
+    uint64_t aadLen;
     SA2UL_Object *saObj;
     SA2UL_Config  *saCfg;
     SA2UL_Attrs   *saAttrs;
@@ -1088,11 +1155,22 @@ int32_t SA2UL_contextAlloc(SA2UL_Handle handle, SA2UL_ContextObject *ctxObj, con
                         CSL_FMK(SA2UL_ENCRCTL_TRAILER_EVERY_CHUNK, 0u) |
                         CSL_FMK(SA2UL_ENCRCTL_TRAILER_AT_END, 0u) |
                         CSL_FMK(SA2UL_ENCRCTL_PKT_DATA_SECTION_UPDATE, 1u) |
-                        CSL_FMK(SA2UL_ENCRCTL_ENCRYPT_DECRYPT, ctxObj->ctxPrms.encDirection) |
+                        CSL_FMK(SA2UL_ENCRCTL_ENCRYPT_DECRYPT, 0u) |
                         CSL_FMK(SA2UL_ENCRCTL_BLK_SIZE, SA2UL_EncBlksizeEncoded[ctxObj->ctxPrms.encAlg]) |
                         CSL_FMK(SA2UL_ENCRCTL_SOP_OFFSET, gSa2ulMceDataArray[mcDataIndex].sopOffset) |
                         CSL_FMK(SA2UL_ENCRCTL_MIDDLE_OFFSET, gSa2ulMceDataArray[mcDataIndex].middleOffset) |
                         CSL_FMK(SA2UL_ENCRCTL_EOP_OFFSET, gSa2ulMceDataArray[mcDataIndex].eopOffset);
+
+                        if(ctxObj->ctxPrms.encMode == SA2UL_ENC_MODE_GCM)
+                        {
+                            /* Update Trailer only after specified length has been processed. */
+                            sc.u.enc.encrCtl |= CSL_FMK(SA2UL_ENCRCTL_TRAILER_AT_END, 1u);
+                        }
+                        else
+                        {
+                            /* Update the encryption direction. */
+                            sc.u.enc.encrCtl |= CSL_FMK(SA2UL_ENCRCTL_ENCRYPT_DECRYPT, ctxObj->ctxPrms.encDirection);
+                        }
 
                         SA2UL_u8LeToU32(sc.u.enc.modeCtrlInstrs,
                             gSa2ulMceDataArray[mcDataIndex].mcInstrs,
@@ -1107,8 +1185,31 @@ int32_t SA2UL_contextAlloc(SA2UL_Handle handle, SA2UL_ContextObject *ctxObj, con
                             /* Invert the key in context */
                             SA2UL_aesInvKey(sc.u.enc.encKeyValue, sc.u.enc.encKeyValue, SA2UL_ENC_KEYSIZE_BITS(ctxObj->ctxPrms.encKeySize));
                         }
-                        /* Copy IV */
-                        SA2UL_u8LeToU32(sc.u.enc.encAux2, ctxObj->ctxPrms.iv,SA2UL_MAX_IV_SIZE_BYTES);
+
+                        if (ctxObj->ctxPrms.encMode == SA2UL_ENC_MODE_GCM)
+                        {
+                            /* Copy IV */
+                            SA2UL_u8LeToU32(sc.u.enc.encAux3, ctxObj->ctxPrms.iv,SA2UL_MAX_IV_SIZE_BYTES_GCM);
+                            sc.u.enc.encAux3[SA2UL_MAX_IV_SIZE_BYTES_GCM / 4U] = (uint32_t) 0x1U;
+                            /**
+                            * EncryptionAux 1
+                            * Aux1[127:0] = Len(A) || Len(C)
+                            * Note: cipher_length is required in bits
+                            */
+                            SA2UL_u8LeToU32(sc.u.enc.encAux1, ctxObj->ctxPrms.ghash, SA2UL_GHASH_LENGTH_BYTES);
+                            SA2UL_u8LeToU32(sc.u.enc.encAux2, ctxObj->ctxPrms.aad, SA2UL_MAX_AAD_SIZE_BYTES);
+                            aadLen = (ctxObj->ctxPrms.aadLen << 3);
+                            sc.u.enc.encAux1[4] = (uint32_t) (aadLen >> 32U);
+                            sc.u.enc.encAux1[5] = (uint32_t) (aadLen & 0xFFFFU);
+
+                            sc.u.enc.encAux1[6] = (uint32_t) (authLen >> 32U);
+                            sc.u.enc.encAux1[7] = (uint32_t) (authLen & 0xFFFFU);
+                        }
+                        else
+                        {
+                            /* Copy IV */
+                            SA2UL_u8LeToU32(sc.u.enc.encAux3, ctxObj->ctxPrms.iv,SA2UL_MAX_IV_SIZE_BYTES);
+                        }
 
                         sc.scctl.scctl1 =
                             CSL_FMK(SA2UL_SCCTL1_OWNER, 1u) |
@@ -1120,7 +1221,7 @@ int32_t SA2UL_contextAlloc(SA2UL_Handle handle, SA2UL_ContextObject *ctxObj, con
             else
             {
                 /* Not implemented at present */
-                retVal = SystemP_FAILURE;
+                retVal = SystemP_FAILURE;       
             }
             if (SystemP_SUCCESS == retVal)
             {
@@ -1204,8 +1305,8 @@ int32_t SA2UL_contextProcess(SA2UL_ContextObject *pCtxObj,const uint8_t  *input,
         }
 
         if(SystemP_SUCCESS == retVal)
-        {
-
+        {   
+            
             for(processIterations = 0; processIterations < numChunks;processIterations++)
             {
                 retVal      = SA2UL_pushBuffer(pCtxObj,ptrInput, maxLength, ptrOutput);
@@ -1618,6 +1719,18 @@ static int32_t SA2UL_getMceIndex(SA2UL_ContextObject *ctxObj, uint8_t *aesKeyInv
                 retVal = MCE_DATA_ARRAY_INDEX_AES_256_CBC_DECRYPT;
             }
         }
+        else if(ctxObj->ctxPrms.encMode == SA2UL_ENC_MODE_GCM)
+        {
+            if(ctxObj->ctxPrms.encDirection == SA2UL_ENC_DIR_ENCRYPT)
+            {
+                retVal = MCE_DATA_ARRAY_INDEX_AES_256_GCM_ENCRYPT;
+            }
+            else
+            {
+                *aesKeyInvFlag = (uint8_t)FALSE;
+                retVal = MCE_DATA_ARRAY_INDEX_AES_256_GCM_DECRYPT;
+            }
+        }
     }
     else if((ctxObj->ctxPrms.encAlg == SA2UL_ENC_ALG_AES) && (ctxObj->ctxPrms.encKeySize == SA2UL_ENC_KEYSIZE_128))
     {
@@ -1637,6 +1750,18 @@ static int32_t SA2UL_getMceIndex(SA2UL_ContextObject *ctxObj, uint8_t *aesKeyInv
             {
                 *aesKeyInvFlag = (uint8_t)TRUE;
                 retVal = MCE_DATA_ARRAY_INDEX_AES_128_CBC_DECRYPT;
+            }
+        }
+        else if(ctxObj->ctxPrms.encMode == SA2UL_ENC_MODE_GCM)
+        {
+            if(ctxObj->ctxPrms.encDirection == SA2UL_ENC_DIR_ENCRYPT)
+            {
+                retVal = MCE_DATA_ARRAY_INDEX_AES_128_GCM_ENCRYPT;
+            }
+            else
+            {
+                *aesKeyInvFlag = (uint8_t)FALSE;
+                retVal = MCE_DATA_ARRAY_INDEX_AES_128_GCM_DECRYPT;
             }
         }
     }
@@ -1659,7 +1784,9 @@ static int32_t SA2UL_pushBuffer(SA2UL_ContextObject *pCtxObj,const uint8_t  *inp
     attrs  = (SA2UL_Attrs *)config->attrs;
 
     if((pCtxObj->txBytesCnt + ilen) > pCtxObj->totalLengthInBytes)
+    {
         retVal = SystemP_FAILURE;
+    }
     if(SystemP_SUCCESS == retVal)
     {
         if(ilen > CSL_FEXT(0xffffffffu, UDMAP_CPPI5_PD_DESCINFO_PKTLEN))
@@ -1789,7 +1916,11 @@ static int32_t SA2UL_pushBuffer(SA2UL_ContextObject *pCtxObj,const uint8_t  *inp
         {
             txDescr->exPktInfo.scptrH |= (CSL_FMK(SA2UL_SCPTRH_EGRESS_CPPI_STATUS_LEN, gSa2ulHashSizeBytes[pCtxObj->ctxPrms.hashAlg & 7u]));
         }
-
+        if((pCtxObj->ctxPrms.opType == SA2UL_OP_ENC) && (pCtxObj->ctxPrms.encMode == SA2UL_ENC_MODE_GCM))
+        {
+            /* SW info word 2 requires egress status length for authentication tag generation for AES GCM (AEAD) operation. */
+            txDescr->exPktInfo.scptrH |= (CSL_FMK(SA2UL_SCPTRH_EGRESS_CPPI_STATUS_LEN, SA2UL_AES_GCM_AUTHTAG_SIZE_IN_BYTES));
+        }
         /* Egress CPPI Destination Queue */
         txDescr->psData.inPsiInfo = CSL_FMK(SA2UL_INPSIINFO_EGRESS_CPPI_DEST_QUEUE_NUM, object->ringaccChnls[attrs->rxRingNumInt]);
 
@@ -1835,7 +1966,7 @@ static int32_t SA2UL_pushBuffer(SA2UL_ContextObject *pCtxObj,const uint8_t  *inp
         /* Push the TX descriptor to TX send ring*/
         phys = (uint64_t)(txDescr);
         SA2UL_ringAccelWriteDescr(config,object->ringaccChnls[attrs->txRingNumInt], phys);
-
+        
         pCtxObj->txBytesCnt += ilen;
 
         /* Perform cache writeback */
@@ -1906,6 +2037,24 @@ static int32_t SA2UL_popBuffer(SA2UL_ContextObject *pCtxObj, uint64_t *doneBuf, 
                     {
                         /* Copy final hash value from last descriptor */
                         SA2UL_u32LeToU8(pCtxObj->computedHash, &rxDescr->psData.trailerData[0], gSa2ulHashSizeBytes[pCtxObj->ctxPrms.hashAlg & 7u]);
+
+                        pCtxObj->computationStatus = 0;
+                    }
+                }
+            }
+            else if((pCtxObj->ctxPrms.opType == SA2UL_OP_ENC) && (pCtxObj->ctxPrms.encMode == SA2UL_ENC_MODE_GCM))
+            {
+                /* Check for protocol-specific data for SA2UL hash ouput */
+                reg = CSL_FEXT(rxDescr->pd.descInfo,
+                        PKTDMA_CPPI5_PD_DESCINFO_PSWCNT);
+
+                if((reg << 2) == SA2UL_AES_GCM_AUTHTAG_SIZE_IN_BYTES)
+                {
+
+                    if(pCtxObj->sa2ulErrCnt == 0u)
+                    {
+                        /* Copy final hash value from last descriptor */
+                        SA2UL_u32LeToU8(pCtxObj->computedHash, &rxDescr->psData.trailerData[0], SA2UL_AES_GCM_AUTHTAG_SIZE_IN_BYTES);
 
                         pCtxObj->computationStatus = 0;
                     }

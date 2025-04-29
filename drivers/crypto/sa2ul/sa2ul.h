@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2021-2022 Texas Instruments Incorporated
+ *  Copyright (C) 2021-2025 Texas Instruments Incorporated
  *
  *  Redistribution and use in source and binary forms, with or without
  *  modification, are permitted provided that the following conditions
@@ -75,6 +75,8 @@ extern "C" {
 #define SA2UL_MAX_KEY_SIZE_BYTES        (32U)
 /** \brief Max Initialization vector (IV) size in bytes */
 #define SA2UL_MAX_IV_SIZE_BYTES         (16U)
+/** \brief Max Initialization vector (IV) size in bytes for AES GCM*/
+#define SA2UL_MAX_IV_SIZE_BYTES_GCM     (12U)
 /** \brief Max number of rings */
 #define SA2UL_NUMBER_OF_RINGS           (3U)
 /** \brief Cache line size for alignment of descriptor and buffers */
@@ -91,6 +93,10 @@ extern "C" {
 #define SA2UL_MAX_INPUT_LENGTH_ENC      (0xFFFFU)
 /** \brief Max input length for authentication (4MB-1) */
 #define SA2UL_MAX_INPUT_LENGTH_AUTH     (0x3FFFFFU)
+/** \brief Max Additional Authenticated Data (AAD) size in bytes */
+#define SA2UL_MAX_AAD_SIZE_BYTES        (16U)
+/** \brief GHASH length in bytes */
+#define SA2UL_GHASH_LENGTH_BYTES        (16U)
 /** @} */
 
 /**
@@ -175,8 +181,10 @@ extern "C" {
 #define SA2UL_ENC_MODE_ECB              (0x0U)
 /** \brief CBC mode */
 #define SA2UL_ENC_MODE_CBC              (0x1U)
+/** \brief GCM mode */
+#define SA2UL_ENC_MODE_GCM              (0x2U)
 /** \brief Maximun Encryption modes */
-#define SA2UL_ENC_MODE_MAX              (0x2U)
+#define SA2UL_ENC_MODE_MAX              (0x3U)
 /** @} */
 
 /**
@@ -226,6 +234,12 @@ typedef struct
     /**< Overall data length, must be sum of all packet lengths */
     uint8_t                 iv[SA2UL_MAX_IV_SIZE_BYTES];
     /**< IV input for encryption, refer \ref SA2UL_InputSizes */
+    uint8_t                 aad[SA2UL_MAX_AAD_SIZE_BYTES];
+    /**< Additional authenticated data, refer \ref SA2UL_InputSizes */
+    uint8_t                 ghash[SA2UL_GHASH_LENGTH_BYTES];
+    /**< Ghash used for AES GCM mode, refer \ref SA2UL_InputSizes */
+    uint32_t                aadLen;
+    /**< Additional authenticated data length, refer \ref SA2UL_InputSizes */
 } SA2UL_ContextParams;
 
 /**
