@@ -347,7 +347,18 @@ void HsmClient_isr(uint8_t remoteCoreId, uint8_t localClientId,
     /* copy message to client response variable */
     /* As this ISR is blocking, quickly copy the message and exit ISR */
     memcpy(&HsmClient->RespMsg, msgValue, SIPC_MSG_SIZE);
-    SemaphoreP_post(&HsmClient->Semaphore);
+
+    /* Check if HSM response message is not related to proc_auth_boot  
+    * proc_auth_boot APIs use HsmClient_EnqueueAndSendMsg() or HsmClient_EnqueueAndSendMsgBlocking()
+    * Others use HsmClient_SendAndRecv()
+    * If true, post the semaphore to signal completion
+    */
+    if ((HsmClient->RespMsg.serType != HSM_MSG_PROC_AUTH_BOOT_START)  &&  /* Not proc_auth_boot auth start */
+    (HsmClient->RespMsg.serType != HSM_MSG_PROC_AUTH_BOOT_UPDATE) &&  /* Not proc_auth_boot auth update */
+    (HsmClient->RespMsg.serType != HSM_MSG_PROC_AUTH_BOOT_FINISH))    /* Not proc_auth_boot auth finish */
+    {
+        SemaphoreP_post(&HsmClient->Semaphore);
+    }  
 
     /*
         Analyze the received response packet.
