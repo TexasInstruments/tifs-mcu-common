@@ -74,6 +74,8 @@ static void DTHE_AES_clearIV(CSL_AesRegs *ptrAesRegs);
 static void DTHE_AES_setIV(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrIV);
 static void DTHE_AES_set128BitKey2Part1(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrKey);
 static void DTHE_AES_set128BitKey2Part2(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrKey);
+static void DTHE_AES_clearKey2Part1(CSL_AesRegs *ptrAesRegs);
+static void DTHE_AES_clearKey2Part2(CSL_AesRegs *ptrAesRegs);
 static void DTHE_AES_pollInputReady(CSL_AesRegs *ptrAesRegs);
 static void DTHE_AES_writeDataBlock(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrData);
 static void DTHE_AES_pollOutputReady(CSL_AesRegs *ptrAesRegs);
@@ -202,6 +204,19 @@ static void DTHE_AES_controlMode(CSL_AesRegs *ptrAesRegs, uint32_t algoType)
         CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_F8, CSL_AES_S_CTRL_F8_RESETVAL);
         CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_F9, CSL_AES_S_CTRL_F9_RESETVAL);
         CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_XTS, CSL_AES_S_CTRL_XTS_NOOP);
+    }
+    else if(algoType == DTHE_AES_GCM_MODE)
+    {
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_GCM, CSL_AES_S_CTRL_GCM_NOOP);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CTR, CSL_AES_S_CTRL_CTR_CTR);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CBCMAC, CSL_AES_S_CTRL_CBCMAC_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_MODE, CSL_AES_S_CTRL_MODE_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_ICM, CSL_AES_S_CTRL_ICM_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CFB, CSL_AES_S_CTRL_CFB_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_F8, CSL_AES_S_CTRL_F8_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_F9, CSL_AES_S_CTRL_F9_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_XTS, CSL_AES_S_CTRL_XTS_RESETVAL);
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CCM, CSL_AES_S_CTRL_CCM_RESETVAL);
     }
     else if(algoType == DTHE_AES_CCM_MODE)
     {
@@ -338,7 +353,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
     uint32_t*       ptrWordOutputBuffer;
     uint32_t        dataLenWords;
     uint16_t        numBlocks;
-    uint32_t        partialDataSize;
+    uint32_t        partialDataSize = 0U;
     uint32_t        index = 0U;
     uint32_t        numBytes = 0U;
     uint8_t         inPartialBlock[32U];
@@ -358,14 +373,38 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
         if(((ptrParams->streamState == DTHE_AES_ONE_SHOT_SUPPORT)||(ptrParams->streamState == DTHE_AES_STREAM_INIT))&&\
             (gStreamState == AES_STATE_NEW))
         {
-            DTHE_AES_controlMode(ptrAesRegs, ptrParams->algoType);
+            if(ptrParams->algoType != DTHE_AES_GHASH_ONLY_MODE)
+            {
+                DTHE_AES_controlMode(ptrAesRegs, ptrParams->algoType);
+            }
+            
+            /* Update mode selection for GCM if provided, else set to default mode-3*/
+            if((ptrParams->algoType == DTHE_AES_GCM_MODE)||(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE))
+            {
+                if(ptrParams->gcmModeSelect != 0)
+                {
+                    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_GCM, ptrParams->gcmModeSelect);
+                }
+                else
+                {
+                    /*Default mode value set to Mode-3*/
+                    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_GCM, DTHE_AES_GCM_MODE_3);
+                }
+            }
 
             /* Key Size setting */
             DTHE_AES_setKeySize(ptrAesRegs, ptrParams->keyLen);
 
             if((ptrParams->streamState == DTHE_AES_ONE_SHOT_SUPPORT)&&(ptrParams->dataLenBytes == 0))
             {
-                status = DTHE_AES_RETURN_FAILURE;
+                if(((ptrParams->algoType == DTHE_AES_CCM_MODE) || (ptrParams->algoType == DTHE_AES_GCM_MODE)) && (ptrParams->aadLength != 0U))
+                {
+                    /*Valid option*/
+                }
+                else
+                {
+                    status = DTHE_AES_RETURN_FAILURE;
+                }
             }
 
             /* Sanity Check: For Decryption data length always needs to be aligned */
@@ -401,6 +440,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     ||(ptrParams->algoType == DTHE_AES_CTR_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_ICM_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_CFB_MODE)\
+                    ||(ptrParams->algoType == DTHE_AES_GCM_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_CCM_MODE))
                 {
                     if (ptrParams->ptrIV == NULL)
@@ -415,6 +455,10 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     /* Normal Key Mode: */
                     CSL_REG32_FINS(&ptrAesRegs->SYSCONFIG,AES_S_SYSCONFIG_DIRECTBUSEN,0U);
 
+                    /* Clear KEY2 (KEY2_PART1) and KEY3 (KEY2_PART2) registers*/
+                    DTHE_AES_clearKey2Part1(ptrAesRegs);
+                    DTHE_AES_clearKey2Part2(ptrAesRegs);
+
                     /* Normal Mode: Key should always be specified */
                     if (ptrParams->ptrKey != NULL)
                     {
@@ -426,6 +470,14 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     {
                         DTHE_AES_set128BitKey2Part1(ptrAesRegs, ptrParams->ptrKey1);
                         DTHE_AES_set128BitKey2Part2(ptrAesRegs, ptrParams->ptrKey2);
+                    }
+
+                    if(((ptrParams->algoType == DTHE_AES_GCM_MODE)||(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE)) && \
+                      ((ptrParams->gcmModeSelect == DTHE_AES_GCM_MODE_1)|| \
+                       (ptrParams->gcmModeSelect == DTHE_AES_GCM_MODE_2)))
+
+                    {
+                        DTHE_AES_set128BitKey2Part1(ptrAesRegs, ptrParams->ptrKey1);
                     }
                 }
 
@@ -455,7 +507,21 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     /* Enable Save Context in CTRL register*/
                     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_SAVE_CONTEXT, 1U);
                 }
-                if (ptrParams->algoType == DTHE_AES_CCM_MODE)
+                else if((ptrParams->algoType == DTHE_AES_GCM_MODE)||(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE))
+                {
+                    DTHE_AES_CTRWidth(ptrAesRegs, DTHE_AES_CTR_WIDTH_32);
+                    /* Clear the IV value */
+                    DTHE_AES_clearIV(ptrAesRegs);
+
+                    if (ptrParams->ptrIV != NULL)
+                    {
+                    	DTHE_AES_setIV(ptrAesRegs, ptrParams->ptrIV);
+                  	}
+
+                    /* Enable Save Context in CTRL register*/
+                    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_SAVE_CONTEXT, 1U);
+                }
+                else if (ptrParams->algoType == DTHE_AES_CCM_MODE)
                 {
                     /* Clear the IV value */
                     DTHE_AES_clearIV(ptrAesRegs);
@@ -486,7 +552,9 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                 }
 				
 				/*Setup Aad data*/
-                if(ptrParams->algoType == DTHE_AES_CCM_MODE)
+                if((ptrParams->algoType == DTHE_AES_GCM_MODE)
+                ||(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE)
+                ||(ptrParams->algoType == DTHE_AES_CCM_MODE))
                 {   
                     /*Send AAD Data*/
                     if((ptrParams->aadLength%4U)==0U)
@@ -549,6 +617,8 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                                 /* Write the data: */
                                 DTHE_AES_writeDataBlock(ptrAesRegs, (uint32_t*)&inPartialBlock[0]);
                             }
+
+                            partialDataSize = 0U;
                         }
                     }
                 }
@@ -623,14 +693,14 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
 
                     DMA_Config_TxChannel(dmaHandle, ptrWordInputBuffer, (uint32_t *)&ptrAesRegs->DATA_IN_3, numBlocks, 0U, DMA_AES_ENABLE);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->algoType != DTHE_AES_GHASH_ONLY_MODE))
                     {
                         DMA_Config_RxChannel(dmaHandle, (uint32_t *)&ptrAesRegs->DATA_IN_3, ptrWordOutputBuffer, numBlocks);
                     }
 
                     DTHE_AES_clearAllInterrupts(ptrAesRegs);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->algoType != DTHE_AES_GHASH_ONLY_MODE))
                     {
                         DTHE_AES_setDMAOutputRequestStatus(ptrAesRegs, 1);
                         DMA_enableRxTransferRegion(dmaHandle);
@@ -639,7 +709,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     DMA_enableTxTransferRegion(dmaHandle);
                     DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 1);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->algoType != DTHE_AES_GHASH_ONLY_MODE))
                     {
                         DMA_WaitForRxTransfer(dmaHandle);
                     }
@@ -647,14 +717,14 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     DMA_WaitForTxTransfer(dmaHandle);
 
                     DTHE_AES_setDMAInputRequestStatus(ptrAesRegs, 0);
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE))
                     {
                         DTHE_AES_setDMAOutputRequestStatus(ptrAesRegs, 0);
                     }
 
                     DMA_disableTxCh(dmaHandle);
 
-                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                    if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->algoType != DTHE_AES_GHASH_ONLY_MODE))
                     {
                         DMA_disableRxCh(dmaHandle);
                     }
@@ -676,7 +746,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                         /* Write the data: */
                         DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[index << 2U]);
 
-                        if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                        if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->algoType != DTHE_AES_GHASH_ONLY_MODE))
                         {
                             /* Wait for the AES IP to be ready with the output data */
                             DTHE_AES_pollOutputReady(ptrAesRegs);
@@ -719,7 +789,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                         /* Write the data: */
                         DTHE_AES_writeDataBlock(ptrAesRegs, (uint32_t *)&inPartialBlock[0U]);
 
-                        if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE))
+                        if((ptrParams->algoType != DTHE_AES_CBC_MAC_MODE)&&(ptrParams->algoType != DTHE_AES_CMAC_MODE)&&(ptrParams->algoType != DTHE_AES_GHASH_ONLY_MODE))
                         {
                             /* Wait for the AES IP to be ready with the output data */
                             DTHE_AES_pollOutputReady(ptrAesRegs);
@@ -727,7 +797,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                             /* Read the decrypted data into the decrypted block: */
                             DTHE_AES_readDataBlock(ptrAesRegs, (uint32_t *)&outPartialBlock[0U]);
 
-                            if((ptrParams->algoType == DTHE_AES_ECB_MODE)||(ptrParams->algoType == DTHE_AES_CBC_MODE)||(ptrParams->algoType == DTHE_AES_CCM_MODE))
+                            if((ptrParams->algoType == DTHE_AES_ECB_MODE)||(ptrParams->algoType == DTHE_AES_CBC_MODE))
                             {
                                 /* Copy the data into the output buffer, always is going to be 16U */
                                 (void)memcpy ((void *)&ptrWordOutputBuffer[index << 2U],
@@ -747,7 +817,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                         numBytes = numBytes + partialDataSize;
                     }
 
-                    if((ptrParams->algoType == DTHE_AES_CBC_MAC_MODE)||(ptrParams->algoType == DTHE_AES_CMAC_MODE)||(ptrParams->algoType == DTHE_AES_CCM_MODE))
+                    if((ptrParams->algoType == DTHE_AES_CBC_MAC_MODE)||(ptrParams->algoType == DTHE_AES_CMAC_MODE)||(ptrParams->algoType == DTHE_AES_GCM_MODE)||(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE)||(ptrParams->algoType == DTHE_AES_CCM_MODE))
                     {
                         DTHE_AES_pollContextReady(ptrAesRegs);
                         DTHE_AES_readTag(ptrAesRegs, &ptrParams->ptrTag[0]);
@@ -956,6 +1026,40 @@ static void DTHE_AES_set128BitKey2Part2(CSL_AesRegs *ptrAesRegs, const uint32_t*
     ptrAesRegs->KEY2_7 = ptrKey[3U];
 
     return;
+}
+
+/**
+ * \brief                   The function is used to configure the key in the AES module This will only configure the 128bit keys.
+ *
+ * \param   ptrAesRegs      Pointer to the EIP38T AES Registers
+ *
+ * \param   ptrKey          Pointer to the 128bit key to be used.
+ *
+ */
+static void DTHE_AES_clearKey2Part1(CSL_AesRegs *ptrAesRegs)
+{
+    /* Clear Key2 [3:0] register fields*/
+    ptrAesRegs->KEY2_0 = 0U;
+    ptrAesRegs->KEY2_1 = 0U;
+    ptrAesRegs->KEY2_2 = 0U;
+    ptrAesRegs->KEY2_3 = 0U;
+}
+
+/**
+ * \brief                   The function is used to configure the key in the AES module This will only configure the 128bit keys.
+ *
+ * \param   ptrAesRegs      Pointer to the EIP38T AES Registers
+ *
+ * \param   ptrKey          Pointer to the 128bit key to be used.
+ *
+ */
+static void DTHE_AES_clearKey2Part2(CSL_AesRegs *ptrAesRegs)
+{
+    /* Clear Key3/ Key2[7:4] register fields*/
+    ptrAesRegs->KEY2_4 = 0U;
+    ptrAesRegs->KEY2_5 = 0U;
+    ptrAesRegs->KEY2_6 = 0U;
+    ptrAesRegs->KEY2_7 = 0U;
 }
 
 /**

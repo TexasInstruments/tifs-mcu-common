@@ -84,8 +84,12 @@ extern "C" {
 #define DTHE_AES_CBC_MAC_MODE                               (0x00000080U)
 /** \brief Flag for AES CMAC Mode */
 #define DTHE_AES_CMAC_MODE                                  (0x00000100U)
+/** \brief Flag for AES GCM Mode */
+#define DTHE_AES_GCM_MODE                                   (0x00000200U)
+/** \brief Flag for AES GCM Mode */
+#define DTHE_AES_GHASH_ONLY_MODE                            (0x00000400U)
 /** \brief Flag for AES CCM Mode */
-#define DTHE_AES_CCM_MODE                                   (0x00000120U)
+#define DTHE_AES_CCM_MODE                                   (0x00000800U)
 
 /** \brief Size of AES key is of 128-bit */
 #define DTHE_AES_KEY_128_SIZE                               (0x00000001U)
@@ -119,7 +123,12 @@ extern "C" {
 /** \brief AES STREAM SUPPORT : FINISH */
 #define DTHE_AES_STREAM_FINISH                              (0xEE55FF66U)
 
-
+/** \brief AES GCM Operation Select Mode 1 */
+#define DTHE_AES_GCM_MODE_1                                 (0x1U)
+/** \brief AES GCM Operation Select Mode 2 */
+#define DTHE_AES_GCM_MODE_2                                 (0x2U)
+/** \brief AES GCM Operation Select Mode 3 */
+#define DTHE_AES_GCM_MODE_3                                 (0x3U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -280,6 +289,12 @@ typedef struct DTHE_AES_Params_t
      *<  CCMM value
      */
     uint32_t           ccmM;
+
+    /**
+     *< To be used only for GCM, additional mode selection for GCM operation
+     * Supported values are 1, 2 and 3
+     */
+    uint32_t           gcmModeSelect;
 }DTHE_AES_Params;
 /* ========================================================================== */
 /*                            Global Variables                                */
