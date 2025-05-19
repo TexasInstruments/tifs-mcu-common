@@ -1570,8 +1570,8 @@ static int32_t SA2UL_setupTxChannel(SA2UL_Config *config)
         chPrms.fqRingPrms.mode       = TISCI_MSG_VALUE_RM_RING_MODE_RING;
 
         /* Open TX channel for transmit */
-        object->txChHandle           = &object->udmaTxChObj;
-        object->drvHandle            = (void *)attrs->udmaHandle;
+        object->txChHandle           =  &object->udmaTxChObj;
+        object->drvHandle            = (Udma_DrvHandle)attrs->udmaHandle;
     }
 
     retVal = Udma_chOpen(object->drvHandle, object->txChHandle, UDMA_CH_TYPE_TX_MAPPED, &chPrms);
