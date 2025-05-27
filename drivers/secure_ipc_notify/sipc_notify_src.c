@@ -313,7 +313,7 @@ int32_t SIPC_sendMsg(uint8_t remoteSecCoreId, uint8_t remoteClientId,uint8_t loc
         SIPC_insertClientIds(remoteClientId,localClientId, msgValue);
 
         SIPC_getWriteMailbox(remoteSecCoreId, &mailboxBaseAddr, &intrBitPos, &swQ);
-        if( mailboxBaseAddr == NULL || swQ == NULL)
+        if( mailboxBaseAddr == (uint32_t) NULL || swQ == NULL)
         {
             return status;
         }
