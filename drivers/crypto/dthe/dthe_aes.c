@@ -55,6 +55,10 @@
 /** This is the state of a stream in progress */
 #define     AES_STATE_IN_PROGRESS       (0xA5U)
 
+/** XTS Last Block Status */
+#define     AES_XTS_LAST_BLOCK_TRUE     (0x55U)
+#define     AES_XTS_LAST_BLOCK_FALSE    (0x00U)
+
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
@@ -72,6 +76,7 @@ static void DTHE_AES_setKeySize(CSL_AesRegs *ptrAesRegs, uint8_t size);
 static void DTHE_AES_set256BitKey1(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrKey);
 static void DTHE_AES_clearIV(CSL_AesRegs *ptrAesRegs);
 static void DTHE_AES_setIV(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrIV);
+static void DTHE_AES_readIV(CSL_AesRegs *ptrAesRegs, uint32_t* ivReg);
 static void DTHE_AES_set128BitKey2Part1(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrKey);
 static void DTHE_AES_set128BitKey2Part2(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrKey);
 static void DTHE_AES_clearKey2Part1(CSL_AesRegs *ptrAesRegs);
@@ -294,6 +299,33 @@ static inline void DTHE_AES_setCCM_M(CSL_AesRegs *ptrAesRegs, uint32_t ccmMLenBy
     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CCM_M, ccmMLenBytes);
 }
 
+static void DTHE_AES_updateXTSIv(CSL_AesRegs *ptrAesRegs, const DTHE_AES_Params* ptrParams, uint32_t *newIv, Bool isFirstBlock)
+{
+    if(isFirstBlock == TRUE)
+    {
+       DTHE_AES_set256BitKey1(ptrAesRegs, ptrParams->ptrKey);
+
+       if( ptrParams->ptrKey1 != NULL)
+       {
+           DTHE_AES_set128BitKey2Part1(ptrAesRegs, ptrParams->ptrKey1);
+       }
+
+       if( ptrParams->ptrKey2 != NULL)
+       {
+           DTHE_AES_set128BitKey2Part2(ptrAesRegs, ptrParams->ptrKey2);
+       }
+
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_XTS, ptrParams->modeSelect);
+    }
+    else
+    {
+        CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_XTS, DTHE_AES_XTS_MODE_1);
+    }
+
+    DTHE_AES_setIV(ptrAesRegs, newIv);
+
+}
+
 /**
  * \brief                   The function is clear interrupts
  *
@@ -358,6 +390,11 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
     uint32_t        numBytes = 0U;
     uint8_t         inPartialBlock[32U];
     uint8_t         outPartialBlock[32U];
+    uint32_t        AesXtsLastIV[4] = {0};
+    uint8_t         processCtsBlk = AES_XTS_LAST_BLOCK_FALSE;
+    uint8_t         tempData[16] = {0};
+    uint8_t         *ptrByteBuf = NULL;
+    uint32_t        reserveDmaStatus;
 
     if (NULL != handle)
     {
@@ -381,14 +418,28 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
             /* Update mode selection for GCM if provided, else set to default mode-3*/
             if((ptrParams->algoType == DTHE_AES_GCM_MODE)||(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE))
             {
-                if(ptrParams->gcmModeSelect != 0)
+                if(ptrParams->modeSelect != 0)
                 {
-                    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_GCM, ptrParams->gcmModeSelect);
+                    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_GCM, ptrParams->modeSelect);
                 }
                 else
                 {
                     /*Default mode value set to Mode-3*/
                     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_GCM, DTHE_AES_GCM_MODE_3);
+                }
+            }
+
+            /*Update additional mode selection for XTS if provided, else set to default value*/
+            if(ptrParams->algoType == DTHE_AES_XTS_MODE)
+            {
+                if(ptrParams->modeSelect != 0)
+                {
+                    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_XTS, ptrParams->modeSelect);
+                }
+                else
+                {
+                    /*Default mode value set to Mode-3*/
+                    CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_XTS, DTHE_AES_XTS_MODE_3);
                 }
             }
 
@@ -408,7 +459,8 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
             }
 
             /* Sanity Check: For Decryption data length always needs to be aligned */
-            if (ptrParams->opType == DTHE_AES_DECRYPT)
+            if ((ptrParams->opType == DTHE_AES_DECRYPT)&&\
+                (ptrParams->algoType != DTHE_AES_XTS_MODE))
             {
                 if ((ptrParams->dataLenBytes % 4U) != 0U)
                 {
@@ -441,7 +493,8 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     ||(ptrParams->algoType == DTHE_AES_ICM_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_CFB_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_GCM_MODE)\
-                    ||(ptrParams->algoType == DTHE_AES_CCM_MODE))
+                    ||(ptrParams->algoType == DTHE_AES_CCM_MODE)\
+                    ||(ptrParams->algoType == DTHE_AES_XTS_MODE))
                 {
                     if (ptrParams->ptrIV == NULL)
                     {
@@ -472,12 +525,23 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                         DTHE_AES_set128BitKey2Part2(ptrAesRegs, ptrParams->ptrKey2);
                     }
 
-                    if(((ptrParams->algoType == DTHE_AES_GCM_MODE)||(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE)) && \
-                      ((ptrParams->gcmModeSelect == DTHE_AES_GCM_MODE_1)|| \
-                       (ptrParams->gcmModeSelect == DTHE_AES_GCM_MODE_2)))
-
-                    {
+                    if (((ptrParams->algoType == DTHE_AES_GCM_MODE)|| (ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE))&& \
+                      ((ptrParams->modeSelect == DTHE_AES_GCM_MODE_1)|| \
+                       (ptrParams->modeSelect == DTHE_AES_GCM_MODE_2))) {
                         DTHE_AES_set128BitKey2Part1(ptrAesRegs, ptrParams->ptrKey1);
+                    }
+                    
+                    /* Adding the provision to add second key fo XTS */
+                    if (ptrParams->algoType == DTHE_AES_XTS_MODE) {
+                        /* Only valid for XTS Mode : 2, 3 */
+                        if ((ptrParams->modeSelect == DTHE_AES_XTS_MODE_2) \
+                           ||(ptrParams->modeSelect == DTHE_AES_XTS_MODE_3)) {
+                            DTHE_AES_set128BitKey2Part1(ptrAesRegs, ptrParams->ptrKey1);
+                            /* Only program, if the ptr is valid. */
+                            if (ptrParams->ptrKey2 != NULL) {
+                                DTHE_AES_set128BitKey2Part2(ptrAesRegs, ptrParams->ptrKey2);
+                            }
+                        }
                     }
                 }
 
@@ -493,7 +557,8 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                 if((ptrParams->algoType == DTHE_AES_CBC_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_CTR_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_ICM_MODE)\
-                    ||(ptrParams->algoType == DTHE_AES_CFB_MODE))
+                    ||(ptrParams->algoType == DTHE_AES_CFB_MODE)\
+                    ||(ptrParams->algoType == DTHE_AES_XTS_MODE))
                 {
                     if (ptrParams->ptrIV != NULL)
                     {
@@ -550,9 +615,15 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     /* Setup the data length: */
                     DTHE_AES_setDataLengthBytes(ptrAesRegs, ptrParams->dataLenBytes);
                 }
-				
-				/*Setup Aad data*/
-                if((ptrParams->algoType == DTHE_AES_GCM_MODE)
+
+                if(ptrParams->algoType == DTHE_AES_XTS_MODE)
+                {
+                    /* Setup the AAD length: */
+                    DTHE_AES_setAADLengthBytes(ptrAesRegs, ptrParams->aadLength);
+                }
+
+                /*Setup Aad data*/
+                if ((ptrParams->algoType == DTHE_AES_GCM_MODE)
                 ||(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE)
                 ||(ptrParams->algoType == DTHE_AES_CCM_MODE))
                 {   
@@ -568,7 +639,6 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
 
                             if ( (config->dmaEnable == DMA_ENABLE) && (numBlocks > 0U) )
                             {
-
                                 /* Open DMA channel for AES AAD */
                                 dmaHandle = DMA_open(0);
                                 
@@ -684,12 +754,25 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
 
                 /* Compute the number of full blocks which can be written: Each block is 4words long*/
                 numBlocks = (dataLenWords / 4U);
-
-                if ( (config->dmaEnable == DMA_ENABLE) && (numBlocks > 0U) )
+                
+                /* Storing of CTS is only required for last block processed in case of AES XTS */
+                if (((ptrParams->streamState == DTHE_AES_ONE_SHOT_SUPPORT) ||\
+                    (ptrParams->streamState == DTHE_AES_STREAM_FINISH)) &&\
+                    (ptrParams->algoType == DTHE_AES_XTS_MODE) &&\
+                    (ptrParams->opType == DTHE_AES_DECRYPT) &&\
+                    (partialDataSize != 0U))
                 {
+                    /*CTS is required in XTS decryption if partial data present, so process with edma till second-last complete block only
+                     */
+                    reserveDmaStatus = config->dmaEnable;
+                    config->dmaEnable = DMA_DISABLE;
+                    --numBlocks ;
+                    processCtsBlk = AES_XTS_LAST_BLOCK_TRUE;
+                }
 
+                if ( (config->dmaEnable == DMA_ENABLE) && (numBlocks > 0U))
+                {                   
                     dmaHandle = DMA_open(0);
-
 
                     DMA_Config_TxChannel(dmaHandle, ptrWordInputBuffer, (uint32_t *)&ptrAesRegs->DATA_IN_3, numBlocks, 0U, DMA_AES_ENABLE);
 
@@ -760,6 +843,32 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     }
                 }
 
+                /*Process the last complete block for XTS decryption with CTS*/
+                if (processCtsBlk == AES_XTS_LAST_BLOCK_TRUE) {
+                    /* Restore the DMA status for unaligned data */
+                    config->dmaEnable = reserveDmaStatus;
+                    /*Store IV (Tn-1) for XTS as CTS in decryption is required*/
+                    DTHE_AES_readIV(ptrAesRegs, AesXtsLastIV);
+
+                    /* Wait for the AES IP to be ready to receive the data: */
+                    DTHE_AES_pollInputReady(ptrAesRegs);
+                    /* Write the data: */
+                    DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[numBlocks << 2U]);
+
+                    /* Wait for the AES IP to be ready with the output data */
+                    DTHE_AES_pollOutputReady(ptrAesRegs);
+
+                    /* Read the decrypted data into the decrypted block: */
+                    DTHE_AES_readDataBlock(ptrAesRegs, &ptrWordOutputBuffer[numBlocks << 2U]);
+
+                    /* Compute the number of bytes which have been processed: */
+                    numBytes = numBytes + (4U * sizeof(uint32_t));
+
+                    /*update numBlock back to total no. of complete blocks*/
+                    numBlocks++;
+                    index++;
+                }
+
                 /* - This flow is for one-shot in continuation to the above flow
                    - In case of Finish continue execution from here
                    - Update should not execute this because this is for partial block
@@ -783,6 +892,39 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                             inPartialBlock[partialDataSize] = 0x80;
                         }
 
+                        /* For AES XTS: Implement Cipher Text Stealing (CTS) [Step 1] for partial block if it's not the first block*/
+                        if ((ptrParams->algoType == DTHE_AES_XTS_MODE) && (numBlocks != 0)) {
+                            if (ptrParams->opType == DTHE_AES_DECRYPT) {
+                                /* Wait for the AES IP to be ready to receive the data: */
+                                DTHE_AES_pollInputReady(ptrAesRegs);
+                                /* Write the data: */
+                                DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[(numBlocks-1) << 2U]);
+
+                                /* Wait for the AES IP to be ready with the output data */
+                                DTHE_AES_pollOutputReady(ptrAesRegs);
+                                /* Read the decrypted data into the decrypted block: */
+                                DTHE_AES_readDataBlock(ptrAesRegs, &ptrWordOutputBuffer[(numBlocks-1) << 2U]);
+
+                                /*Update Iv to load tweak value*/
+                                if (numBlocks == 1U) {
+                                    DTHE_AES_updateXTSIv(ptrAesRegs, ptrParams, AesXtsLastIV, TRUE);
+                                } else {
+                                    DTHE_AES_updateXTSIv(ptrAesRegs, ptrParams, AesXtsLastIV, FALSE);
+                                }
+                            }
+
+                            memset(tempData, 0, sizeof(tempData));
+
+                            /*Copy last "complete 16-byte block" output data to tempData buffer*/
+                            ptrByteBuf = (uint8_t*)&ptrWordOutputBuffer[(numBlocks-1)<<2U];
+                            memcpy(&tempData[0], ptrByteBuf, 16);
+
+                            /*Update pointer to last valid byte of inPartialBlock and fill remaing data from last
+                                output data block at same index to make inPartialBlock 128 bit aligned*/
+                            ptrByteBuf = (uint8_t*)&inPartialBlock[0];
+                            memcpy(&ptrByteBuf[partialDataSize], &tempData[partialDataSize], 16-partialDataSize);
+                        }
+
                         /* Wait for the AES IP to be ready to receive the data: */
                         DTHE_AES_pollInputReady(ptrAesRegs);
 
@@ -803,6 +945,19 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                                 (void)memcpy ((void *)&ptrWordOutputBuffer[index << 2U],
                                         (void *)&outPartialBlock[0U],
                                         16U);
+                            }
+                            else if((ptrParams->algoType == DTHE_AES_XTS_MODE) && (numBlocks != 0))
+                            {
+                                /* XTS: Implement Cipher Text Stealing (CTS) [Step 2] for partial block*/
+                                /*Replace 2nd last block of output buffer with current AES output*/
+                                (void)memcpy ((void *)&ptrWordOutputBuffer[(index-1) << 2U],
+                                        (void *)&outPartialBlock[0U],
+                                        16U);
+
+                                /*tempData has output of last result, copy this to last out block buffer upto partialDataSize*/
+                                (void)memcpy ((void *)&ptrWordOutputBuffer[(index) << 2U],
+                                        (void *)&tempData[0U],
+                                        partialDataSize);
                             }
                             else
                             {
@@ -980,6 +1135,17 @@ static void DTHE_AES_setKeySize(CSL_AesRegs *ptrAesRegs, uint8_t size)
  */
 static void DTHE_AES_set256BitKey1(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrKey)
 {
+
+    /* Clear Key1 [7:0] register fields*/
+    ptrAesRegs->KEY1_0 = 0U;
+    ptrAesRegs->KEY1_1 = 0U;
+    ptrAesRegs->KEY1_2 = 0U;
+    ptrAesRegs->KEY1_3 = 0U;
+    ptrAesRegs->KEY1_4 = 0U;
+    ptrAesRegs->KEY1_5 = 0U;
+    ptrAesRegs->KEY1_6 = 0U;
+    ptrAesRegs->KEY1_7 = 0U;
+
     ptrAesRegs->KEY1_0 = ptrKey[0U];
     ptrAesRegs->KEY1_1 = ptrKey[1U];
     ptrAesRegs->KEY1_2 = ptrKey[2U];
@@ -1097,6 +1263,22 @@ static void DTHE_AES_setIV(CSL_AesRegs *ptrAesRegs, const uint32_t* ptrIV)
     ptrAesRegs->IV_IN_3 = ptrIV[3U];
 
     return;
+}
+
+/**
+ * \brief                   The function is used to read the IV from the AES engine
+ *
+ * \param   ptrAesRegs      Pointer to the EIP38T AES Registers
+ *
+ * \param   ivReg           Pointer to the IV buffer populated by the API
+ *
+ */
+static inline void DTHE_AES_readIV(CSL_AesRegs *ptrAesRegs, uint32_t* ivReg)
+{
+    ivReg[0] = ptrAesRegs->IV_IN_0;
+    ivReg[1] = ptrAesRegs->IV_IN_1;
+    ivReg[2] = ptrAesRegs->IV_IN_2;
+    ivReg[3] = ptrAesRegs->IV_IN_3;
 }
 
 /**

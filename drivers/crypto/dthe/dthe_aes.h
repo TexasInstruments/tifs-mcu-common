@@ -65,43 +65,43 @@ extern "C" {
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 /** \brief Flag for AES ECB Mode */
-#define DTHE_AES_ECB_MODE                                   (0x00000000U)
+#define DTHE_AES_ECB_MODE                                       (0x00000000U)
 /** \brief Flag for AES CBC Mode */
-#define DTHE_AES_CBC_MODE                                   (0x00000001U)
+#define DTHE_AES_CBC_MODE                                       (0x00000001U)
 /** \brief Flag for AES CTR Mode */
-#define DTHE_AES_CTR_MODE                                   (0x00000002U)
+#define DTHE_AES_CTR_MODE                                       (0x00000002U)
 /** \brief Flag for AES ICM Mode */
-#define DTHE_AES_ICM_MODE                                   (0x00000004U)
+#define DTHE_AES_ICM_MODE                                       (0x00000004U)
 /** \brief Flag for AES CFB Mode */
-#define DTHE_AES_CFB_MODE                                   (0x00000008U)
+#define DTHE_AES_CFB_MODE                                       (0x00000008U)
 /** \brief Flag for AES F8 Mode */
-#define DTHE_AES_F8_MODE                                    (0x00000010U)
+#define DTHE_AES_F8_MODE                                        (0x00000010U)
 /** \brief Flag for AES F9 Mode */
-#define DTHE_AES_F9_MODE                                    (0x00000020U)
+#define DTHE_AES_F9_MODE                                        (0x00000020U)
 /** \brief Flag for AES XTS Mode */
-#define DTHE_AES_XTS_MODE                                   (0x00000040U)
+#define DTHE_AES_XTS_MODE                                       (0x00000040U)
 /** \brief Flag for AES CBC-MAC Mode */
-#define DTHE_AES_CBC_MAC_MODE                               (0x00000080U)
+#define DTHE_AES_CBC_MAC_MODE                                   (0x00000080U)
 /** \brief Flag for AES CMAC Mode */
-#define DTHE_AES_CMAC_MODE                                  (0x00000100U)
+#define DTHE_AES_CMAC_MODE                                      (0x00000100U)
 /** \brief Flag for AES GCM Mode */
-#define DTHE_AES_GCM_MODE                                   (0x00000200U)
+#define DTHE_AES_GCM_MODE                                       (0x00000200U)
 /** \brief Flag for AES GCM Mode */
-#define DTHE_AES_GHASH_ONLY_MODE                            (0x00000400U)
+#define DTHE_AES_GHASH_ONLY_MODE                                (0x00000400U)
 /** \brief Flag for AES CCM Mode */
-#define DTHE_AES_CCM_MODE                                   (0x00000800U)
+#define DTHE_AES_CCM_MODE                                       (0x00000800U)
 
 /** \brief Size of AES key is of 128-bit */
-#define DTHE_AES_KEY_128_SIZE                               (0x00000001U)
+#define DTHE_AES_KEY_128_SIZE                                   (0x00000001U)
 /** \brief Size of AES key is of 192-bit */
-#define DTHE_AES_KEY_192_SIZE                               (0x00000002U)
+#define DTHE_AES_KEY_192_SIZE                                   (0x00000002U)
 /** \brief Size of AES key is of 256-bit */
-#define DTHE_AES_KEY_256_SIZE                               (0x00000003U)
+#define DTHE_AES_KEY_256_SIZE                                   (0x00000003U)
 
 /** \brief AES Encrypt Flag */
-#define DTHE_AES_ENCRYPT                                    (0x016FE45DU)
+#define DTHE_AES_ENCRYPT                                        (0x016FE45DU)
 /** \brief AES Decrypt Flag */
-#define DTHE_AES_DECRYPT                                    (0xDCBA4213U)
+#define DTHE_AES_DECRYPT                                        (0xDCBA4213U)
 
 /** \brief AES CTR Counter Width is 16 (ICM) */
 #define DTHE_AES_CTR_WIDTH_16                                    (0x00000001U)
@@ -115,20 +115,27 @@ extern "C" {
 #define DTHE_AES_CTR_WIDTH_128                                   (0x00000010U)
 
 /** \brief AES STREAM SUPPORT */
-#define DTHE_AES_ONE_SHOT_SUPPORT                           (0x00000000U)
+#define DTHE_AES_ONE_SHOT_SUPPORT                               (0x00000000U)
 /** \brief AES STREAM SUPPORT : INIT */
-#define DTHE_AES_STREAM_INIT                               (0xAA11BB22U)
+#define DTHE_AES_STREAM_INIT                                    (0xAA11BB22U)
 /** \brief AES STREAM SUPPORT : UPDATE */
-#define DTHE_AES_STREAM_UPDATE                              (0x33CC44DDU)
+#define DTHE_AES_STREAM_UPDATE                                  (0x33CC44DDU)
 /** \brief AES STREAM SUPPORT : FINISH */
-#define DTHE_AES_STREAM_FINISH                              (0xEE55FF66U)
+#define DTHE_AES_STREAM_FINISH                                  (0xEE55FF66U)
 
 /** \brief AES GCM Operation Select Mode 1 */
-#define DTHE_AES_GCM_MODE_1                                 (0x1U)
+#define DTHE_AES_GCM_MODE_1                                     (0x1U)
 /** \brief AES GCM Operation Select Mode 2 */
-#define DTHE_AES_GCM_MODE_2                                 (0x2U)
+#define DTHE_AES_GCM_MODE_2                                     (0x2U)
 /** \brief AES GCM Operation Select Mode 3 */
-#define DTHE_AES_GCM_MODE_3                                 (0x3U)
+#define DTHE_AES_GCM_MODE_3                                     (0x3U)
+
+/** \brief AES XTS Operation Select Mode 1 */
+#define DTHE_AES_XTS_MODE_1                                     (0x1U)
+/** \brief AES XTS Operation Select Mode 2 */
+#define DTHE_AES_XTS_MODE_2                                     (0x2U)
+/** \brief AES XTS Operation Select Mode 3 */
+#define DTHE_AES_XTS_MODE_3                                     (0x3U)
 
 /* ========================================================================== */
 /*                         Structure Declarations                             */
@@ -292,9 +299,12 @@ typedef struct DTHE_AES_Params_t
 
     /**
      *< To be used only for GCM, additional mode selection for GCM operation
-     * Supported values are 1, 2 and 3
+     * Supported values are 1, 2 and 3.
+     * 
+     *< To be used only for XTS, additional mode selection for XTS operation
+     * Supported values are 1, 2 and 3.
      */
-    uint32_t           gcmModeSelect;
+    uint32_t           modeSelect;
 }DTHE_AES_Params;
 /* ========================================================================== */
 /*                            Global Variables                                */
