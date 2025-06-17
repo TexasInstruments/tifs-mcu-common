@@ -69,6 +69,7 @@ basicConstraints = CA:true
 {EXT_ENC_SEQ}
 {DBG_EXT}
 {KD_EXT}
+{CRYPTO_UNLOCK_EXT}
 
 [ boot_seq ]
 certType     =  INTEGER:{CERT_TYPE}
@@ -106,6 +107,11 @@ coreDbgSecEn =  INTEGER:0
 g_kd_seq = '''
 [ key_derivation ]
 kd_salt = FORMAT:HEX,OCT:{KDSALT_VAL}
+'''
+
+g_ext_crypto_unlock = '''
+[ crypto_unlock ]
+CryptoUnlockValue = INTEGER:{CRYPTO_UNLOCK_VALUE}
 '''
 
 g_openssl3_x509_template = '''
@@ -134,6 +140,7 @@ subjectKeyIdentifier = none
 {EXT_ENC_SEQ}
 {DBG_EXT}
 {KD_EXT}
+{CRYPTO_UNLOCK_EXT}
 
 [ boot_seq ]
 certType     =  INTEGER:{CERT_TYPE}
@@ -170,6 +177,11 @@ coreDbgSecEn =  INTEGER:0
 g_kd_seq = '''
 [ key_derivation ]
 kd_salt = FORMAT:HEX,OCT:{KDSALT_VAL}
+'''
+
+g_ext_crypto_unlock = '''
+[ crypto_unlock ]
+CryptoUnlockValue = INTEGER:{CRYPTO_UNLOCK_VALUE}
 '''
 
 
@@ -219,6 +231,8 @@ def get_cert(args):
     sbl_enc_seq = ''
     ext_kd_seq = ''
     kd_seq = ''
+    ext_crypto_unlock_seq = ''
+    crypto_unlock_seq = ''
 
     if(args.debug is not None):
         if(args.debug in g_dbg_types):
@@ -231,6 +245,16 @@ def get_cert(args):
             exit(2)
 
     image_bin_name = args.image_bin
+
+    if((args.crypto_unlock.lower()) == 'yes'):
+        ext_crypto_unlock_seq = "1.3.6.1.4.1.294.1.12=ASN1:SEQUENCE:crypto_unlock"
+        crypto_unlock_seq = g_ext_crypto_unlock.format(
+            CRYPTO_UNLOCK_VALUE=195,
+        )
+    else:
+        crypto_unlock_seq = g_ext_crypto_unlock.format(
+            CRYPTO_UNLOCK_VALUE=60,
+        )
 
     if (args.sbl_enc or args.tifs_enc):
         enc_iter_count = ''
@@ -298,6 +322,7 @@ def get_cert(args):
             BOOT_CORE_ID=bootCore_id,
             CERT_TYPE=certType,
             BOOT_CORE_OPTS=bootCoreOptions,
+            CRYPTO_UNLOCK_EXT=ext_crypto_unlock_seq,
             BOOT_ADDR='{:08X}'.format(int(args.loadaddr, 16)),
             IMAGE_LENGTH=os.path.getsize(image_bin_name),
         )
@@ -313,6 +338,7 @@ def get_cert(args):
             BOOT_CORE_ID=bootCore_id,
             CERT_TYPE=certType,
             BOOT_CORE_OPTS=bootCoreOptions,
+            CRYPTO_UNLOCK_EXT=ext_crypto_unlock_seq,
             BOOT_ADDR='{:08X}'.format(int(args.loadaddr, 16)),
             IMAGE_LENGTH=os.path.getsize(image_bin_name),
         )
@@ -331,6 +357,9 @@ def get_cert(args):
 
     if(args.kd_salt and args.sbl_enc):
         ret_cert += kd_seq
+    
+    if((args.crypto_unlock.lower()) == 'yes'):
+        ret_cert += crypto_unlock_seq
 
     if(dbg_seq != ''):
         ret_cert += g_dbg_seq.format(
@@ -448,6 +477,9 @@ my_parser.add_argument('--fw_type',       type=str,
                        help='firmware type')
 my_parser.add_argument('--img_integ',       type=str,
                        help='Image integrity extension', default='yes')
+my_parser.add_argument('--crypto_unlock',       type=str,
+                       help='Crypto engine unlock extension', default='no', 
+                       required=False)
 
 args = my_parser.parse_args()
 
