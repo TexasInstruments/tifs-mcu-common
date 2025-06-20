@@ -55,8 +55,10 @@
 /** This is the state of a stream in progress */
 #define     AES_STATE_IN_PROGRESS       (0xA5U)
 
-/** XTS Last Block Status */
+/** XTS Last Block Status : TRUE */
 #define     AES_XTS_LAST_BLOCK_TRUE     (0x55U)
+
+/** XTS Last Block Status : FALSE */
 #define     AES_XTS_LAST_BLOCK_FALSE    (0x00U)
 
 /* ========================================================================== */
