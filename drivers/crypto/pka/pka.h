@@ -53,7 +53,11 @@
 /* ========================================================================== */
 
 #include <stdint.h>
+#if defined (SOC_AM64X) || (SOC_AM243X)
+#include <security_common/drivers/crypto/pka/soc/am64x_am243x/eip29t2_firmware.h>
+#else
 #include <security_common/drivers/crypto/pka/eip29t2_firmware.h>
+#endif
 #include <security_common/drivers/crypto/pka/hw_include/cslr_cp_ace.h>
 #include <kernel/dpl/SystemP.h>
 #include <security_common/drivers/crypto/crypto_util.h>
