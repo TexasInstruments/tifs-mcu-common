@@ -337,6 +337,19 @@ struct AsymCrypt_EddsaKey{
     uint8_t    pubKey[EDDSA_MAX_KEY_LEN];
 };
 
+/**
+ * \brief SM2DSA signature
+ *
+ * \param r "r" value in SM2DSA signature in bigint format
+ * \param s "s" value in SM2DSA signature in bigint format
+ */
+struct AsymCrypt_SM2DSASig {
+	/** "r" value in SM2DSA signature */
+	uint32_t	r[ASYM_CRYPT_LEN(EC_PARAM_MAXLEN)];
+	/** "s" value in SM2DSA signature */
+	uint32_t	s[ASYM_CRYPT_LEN(EC_PARAM_MAXLEN)];
+};
+
 /* ========================================================================== */
 /*                            Global Variables                                */
 /* ========================================================================== */
@@ -587,12 +600,72 @@ AsymCrypt_Return_t AsymCrypt_EddsaVerify(AsymCrypt_Handle handle,
  * \return                  #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
  *                          #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
  */
-
 AsymCrypt_Return_t AsymCrypt_EcdhGenSharedSecret(AsymCrypt_Handle handle,
                         const struct AsymCrypt_ECPrimeCurveP *cp,
                         const uint32_t priv[ECDSA_MAX_LENGTH],
                         const struct AsymCrypt_ECPoint *pubKey,
                         struct AsymCrypt_ECPoint *ecShSecret);
+
+/**
+ * \brief SM2DSA sign primitive function
+ *
+ * \param  handle  #AsymCrypt_Handle returned from #AsymCrypt_open()
+ * 
+ * \param priv    EC private key
+ * \param k       Random number for each signing
+ * \param h       Hash value of message to sign in bigint format
+ * \param sig     ECDSA Signature - 'r' and 's' values
+ * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
+ *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
+ */
+AsymCrypt_Return_t AsymCrypt_SM2DSASign(AsymCrypt_Handle handle,
+                    const uint32_t priv[ECDSA_MAX_LENGTH],
+                    const uint32_t k[ECDSA_MAX_LENGTH],
+                    const uint32_t h[ECDSA_MAX_LENGTH],
+                    struct AsymCrypt_SM2DSASig *sig);
+
+/**
+ * \brief SM2DSA verify primitive function
+ *
+ * \param  handle  #AsymCrypt_Handle returned from #AsymCrypt_open()
+ * 
+ * \param pub     EC Public key
+ * \param sig     SM2DSA Signature - 'r' & 's' value in bigint format
+ * \param h       Hash value of message to verify in bigint format
+ *
+ * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
+ *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
+ */
+AsymCrypt_Return_t AsymCrypt_SM2DSAVerify(AsymCrypt_Handle handle,
+                        const struct AsymCrypt_ECPoint *pub,
+                        const struct AsymCrypt_SM2DSASig *sig,
+                        const uint32_t h[ECDSA_MAX_LENGTH]);
+
+/**
+ * \brief SM2DSA KeyGen Private Key function
+ *
+ * \param handle  #AsymCrypt_Handle returned from #AsymCrypt_open()
+ * \param priv    EC Generated Private Key
+ *
+ * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
+ *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
+ */
+AsymCrypt_Return_t AsymCrypt_SM2DSAKeyGenPrivate(AsymCrypt_Handle handle,
+                        uint32_t priv[ECDSA_MAX_LENGTH]);
+
+/**
+ * \brief SM2DSA KeyGen Public Key function
+ *
+ * \param handle  #AsymCrypt_Handle returned from #AsymCrypt_open()
+ * \param priv    SM2 Private Key as input
+ * \param pub     SM2 Generated Public Key
+ *
+ * \return        #ASYM_CRYPT_RETURN_SUCCESS if requested operation completed.
+ *                #ASYM_CRYPT_RETURN_FAILURE if requested operation not completed.
+ */
+AsymCrypt_Return_t AsymCrypt_SM2DSAKeyGenPublic(AsymCrypt_Handle handle,
+                        struct AsymCrypt_ECPoint *pub,
+                        const uint32_t priv[ECDSA_MAX_LENGTH]);
 
 #ifdef __cplusplus
 }
