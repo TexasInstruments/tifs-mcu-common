@@ -55,14 +55,14 @@ void Crypto_Uint8ToUint32(const uint8_t *source, uint32_t sourceLengthInBytes, u
     for (i=0; i< sourceLengthInBytes; i++)
     {
         t = (t << 8) | source[i];
-        if ((i & 3) == 3) {
+        if ((i & 3U) == 3U) {
             *dest++ = t;
             t = 0;
         }
     }
-    if ((i & 3) != 0)
+    if ((i & 3U) != 0U)
     {
-        *dest = t << ((4-(i&3)) << 3);
+        *dest = t << ((4U-(i&3U)) << 3);
     }
     return;
 }
@@ -71,7 +71,7 @@ void Crypto_Uint32ToUint8(const uint32_t *src, uint32_t sourceLengthInBytes, uin
 {
     uint32_t i, t;
 
-    for (i=0; i< sourceLengthInBytes; i+=4)
+    for (i=0; i< sourceLengthInBytes; i+=4U)
     {
         t = *src++;
         *dest++ = t >> 24;
@@ -85,18 +85,18 @@ void Crypto_Uint32ToUint8(const uint32_t *src, uint32_t sourceLengthInBytes, uin
 void Crypto_Uint32ToBigInt(uint32_t *source, uint32_t sourceLengthInWords, uint32_t *dest)
 {
     uint32_t i, t = 0, t2 = 0;
-    t2 = sourceLengthInWords / 2;
+    t2 = sourceLengthInWords / 2U;
 
     for(i=0;i<t2;i++)
     {
         t = source[i];
-        source[i] = source[sourceLengthInWords - 1 - i];
-        source[sourceLengthInWords - 1 - i] = t;
+        source[i] = source[sourceLengthInWords - 1U - i];
+        source[sourceLengthInWords - 1U - i] = t;
     }
     dest[0] = sourceLengthInWords;
     for(i=0; i < sourceLengthInWords; i++)
     {
-        dest[1 + i] = source[i];
+        dest[1U + i] = source[i];
     }
 
     return;
@@ -105,17 +105,17 @@ void Crypto_Uint32ToBigInt(uint32_t *source, uint32_t sourceLengthInWords, uint3
 void Crypto_bigIntToUint32(uint32_t *source, uint32_t sourceLengthInWords, uint32_t *dest)
 {
     uint32_t i, t = 0, t2 = 0;
-    t2 = (sourceLengthInWords / 2)+1;
+    t2 = (sourceLengthInWords / 2U)+1U;
 
     for(i=1; i<t2; i++)
     {
         t = source[i];
-        source[i] = source[sourceLengthInWords-(i-1)];
-        source[sourceLengthInWords-(i-1)] = t;
+        source[i] = source[sourceLengthInWords-(i-1U)];
+        source[sourceLengthInWords-(i-1U)] = t;
     }
     for(i=0; i < sourceLengthInWords; i++)
     {
-        dest[i] = source[i+1];
+        dest[i] = source[i+1U];
     }
 
     return;
@@ -129,15 +129,15 @@ void Crypto_PKCSPaddingForSign(const uint8_t *shaHash, uint32_t keyLengthInBytes
     {
         case 0:
             shaLen = 20;
-            psLen = keyLengthInBytes - 3 - shaLen;
+            psLen = keyLengthInBytes - 3U - shaLen;
         break;
         case 1:
             shaLen = 32; 
-            psLen = keyLengthInBytes - 3  - shaLen;
+            psLen = keyLengthInBytes - 3U  - shaLen;
         break;
         case 2:
             shaLen = 64; 
-            psLen = keyLengthInBytes - 3  - shaLen;
+            psLen = keyLengthInBytes - 3U  - shaLen;
         break;
     }
     output[offset] = 0x00;
@@ -189,7 +189,7 @@ void Crypto_PKCSPaddingForMessage(const uint8_t *message, uint32_t msgLengthInBy
     offset++;
     output[offset] = 0x02;
     offset++;
-    psLen = keyLengthInBytes - msgLengthInBytes - 3;
+    psLen = keyLengthInBytes - msgLengthInBytes - 3U;
 
     /* Initializes random number generator */
        srand((unsigned) time(NULL));
@@ -197,7 +197,7 @@ void Crypto_PKCSPaddingForMessage(const uint8_t *message, uint32_t msgLengthInBy
        /* n random numbers from 0 to 99 */
        for( i = 0 ; i < psLen ; i++ )
        {
-        output[offset + i] = (rand() %(upper-lower+1))+lower;
+        output[offset + i] = ((uint32_t)rand() %(upper-lower+1U))+lower;
        }
        offset = offset + psLen;
 

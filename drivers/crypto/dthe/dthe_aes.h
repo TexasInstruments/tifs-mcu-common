@@ -123,6 +123,8 @@ extern "C" {
 /** \brief AES STREAM SUPPORT : FINISH */
 #define DTHE_AES_STREAM_FINISH                                  (0xEE55FF66U)
 
+/** \brief AES No Mode Suppored */
+#define DTHE_AES_NO_MODE                                        (0x0U)
 /** \brief AES GCM Operation Select Mode 1 */
 #define DTHE_AES_GCM_MODE_1                                     (0x1U)
 /** \brief AES GCM Operation Select Mode 2 */

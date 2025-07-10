@@ -213,7 +213,7 @@ int32_t EDMA_enableTxTransferRegion(DMA_Handle handle)
         status = EDMA_enableTransferRegion(globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].baseAddr, globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].regionId, globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].dmaCh,
                                      EDMA_TRIG_MODE_EVENT);
 
-        if ( status == FALSE )
+        if ( 0 == status )
         {
             status = SystemP_FAILURE;
         }
@@ -229,7 +229,7 @@ int32_t EDMA_WaitForTxTransfer(DMA_Handle handle)
 {
     int32_t         status = SystemP_FAILURE;
 
-    while(EDMA_readIntrStatusRegion(globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].baseAddr, globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].regionId, globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].tcc) != 1);
+    while(1U != EDMA_readIntrStatusRegion(globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].baseAddr, globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].regionId, globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].tcc));
     EDMA_clrIntrRegion(globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].baseAddr, globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].regionId, globalEdmaParams[EDMA_TX_CH_PARAMS_INDEX].tcc);
     status = SystemP_SUCCESS;
 
@@ -302,7 +302,7 @@ int32_t EDMA_enableRxTransferRegion(DMA_Handle handle)
 
         status = EDMA_enableTransferRegion(globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].baseAddr, globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].regionId, globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].dmaCh,
                                      EDMA_TRIG_MODE_EVENT);
-        if ( status == FALSE )
+        if ( 0 == status )
         {
             status = SystemP_FAILURE;
         }
@@ -318,7 +318,7 @@ int32_t EDMA_WaitForRxTransfer(DMA_Handle handle)
 {
     int32_t         status = SystemP_SUCCESS;
 
-    while(EDMA_readIntrStatusRegion(globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].baseAddr, globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].regionId, globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].tcc) != 1);
+    while(1U != EDMA_readIntrStatusRegion(globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].baseAddr, globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].regionId, globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].tcc));
     EDMA_clrIntrRegion(globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].baseAddr, globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].regionId, globalEdmaParams[EDMA_RX_CH_PARAMS_INDEX].tcc);
 
     return (status);

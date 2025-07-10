@@ -64,9 +64,9 @@ extern "C" {
 #define DMA_ENABLE                                    (1U)
 
 /** Dma AES disable macro*/
-#define DMA_AES_ENABLE                                (0U)
+#define DMA_AES_ENABLE                                (0)
 /** Dma SHA enable macro*/
-#define DMA_SHA_ENABLE                                (1U)
+#define DMA_SHA_ENABLE                                (1)
 
 /** \brief Handle to the DMA driver returned by #DMA_open() */
 typedef void *DMA_Handle;

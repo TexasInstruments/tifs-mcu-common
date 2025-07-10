@@ -61,6 +61,10 @@
 /** XTS Last Block Status : FALSE */
 #define     AES_XTS_LAST_BLOCK_FALSE    (0x00U)
 
+#define     DTHE_AES_BLOCK_LENGTH       16U
+#define     DTHE_AES_ZERO               0U
+#define     DTHE_AES_ONE                1U
+
 /* ========================================================================== */
 /*                         Structure Declarations                             */
 /* ========================================================================== */
@@ -420,7 +424,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
             /* Update mode selection for GCM if provided, else set to default mode-3*/
             if((ptrParams->algoType == DTHE_AES_GCM_MODE)||(ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE))
             {
-                if(ptrParams->modeSelect != 0)
+                if(ptrParams->modeSelect != DTHE_AES_NO_MODE)
                 {
                     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_GCM, ptrParams->modeSelect);
                 }
@@ -434,7 +438,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
             /*Update additional mode selection for XTS if provided, else set to default value*/
             if(ptrParams->algoType == DTHE_AES_XTS_MODE)
             {
-                if(ptrParams->modeSelect != 0)
+                if(ptrParams->modeSelect != DTHE_AES_NO_MODE)
                 {
                     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_XTS, ptrParams->modeSelect);
                 }
@@ -448,7 +452,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
             /* Key Size setting */
             DTHE_AES_setKeySize(ptrAesRegs, ptrParams->keyLen);
 
-            if((ptrParams->streamState == DTHE_AES_ONE_SHOT_SUPPORT)&&(ptrParams->dataLenBytes == 0))
+            if((ptrParams->streamState == DTHE_AES_ONE_SHOT_SUPPORT)&&(ptrParams->dataLenBytes == DTHE_AES_ZERO))
             {
                 if(((ptrParams->algoType == DTHE_AES_CCM_MODE) || (ptrParams->algoType == DTHE_AES_GCM_MODE)) && (ptrParams->aadLength != 0U))
                 {
@@ -607,7 +611,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                 /*
                 - DataLength is sent by user, then set the same here.
                 - DataLength is not sent by user, then set the length as maximum. */
-                if((ptrParams->streamState != DTHE_AES_ONE_SHOT_SUPPORT)&&(ptrParams->dataLenBytes == 0))
+                if((ptrParams->streamState != DTHE_AES_ONE_SHOT_SUPPORT)&&(ptrParams->dataLenBytes == DTHE_AES_ZERO))
                 {
                     /* Setup the data length: */
                     DTHE_AES_setDataLengthBytes(ptrAesRegs, MAX_VALUE);
@@ -636,8 +640,8 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                         if(ptrParams->aadLength>0U)
                         {
                             ptrWordInputBuffer  = &ptrParams->ptrAAD[0];
-                            numBlocks = (ptrParams->aadLength)/16;
-                            partialDataSize = (ptrParams->aadLength)%16;
+                            numBlocks = (ptrParams->aadLength)/DTHE_AES_BLOCK_LENGTH;
+                            partialDataSize = (ptrParams->aadLength)%DTHE_AES_BLOCK_LENGTH;
 
                             if ( (config->dmaEnable == DMA_ENABLE) && (numBlocks > 0U) )
                             {
@@ -679,10 +683,10 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                                 }
                             }
                             
-                            if(partialDataSize != 0)
+                            if(partialDataSize != DTHE_AES_ZERO)
                             {
                                 memset(inPartialBlock,0u,sizeof(inPartialBlock));
-                                memcpy(inPartialBlock,&ptrWordInputBuffer[numBlocks*4],partialDataSize);
+                                memcpy(inPartialBlock,&ptrWordInputBuffer[numBlocks*4U],partialDataSize);
 
                                 /* Wait for the AES IP to be ready to receive the data: */
                                 DTHE_AES_pollInputReady(ptrAesRegs);
@@ -817,7 +821,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     DMA_close(dmaHandle);
 
                     /* Compute the number of bytes which have been processed: */
-                    numBytes = numBytes + (numBlocks * 4 * sizeof(uint32_t));
+                    numBytes = numBytes + (numBlocks * 4U * sizeof(uint32_t));
                     index = numBlocks;
                 }
                 else
@@ -895,17 +899,17 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                         }
 
                         /* For AES XTS: Implement Cipher Text Stealing (CTS) [Step 1] for partial block if it's not the first block*/
-                        if ((ptrParams->algoType == DTHE_AES_XTS_MODE) && (numBlocks != 0)) {
+                        if ((ptrParams->algoType == DTHE_AES_XTS_MODE) && (numBlocks != DTHE_AES_ZERO)) {
                             if (ptrParams->opType == DTHE_AES_DECRYPT) {
                                 /* Wait for the AES IP to be ready to receive the data: */
                                 DTHE_AES_pollInputReady(ptrAesRegs);
                                 /* Write the data: */
-                                DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[(numBlocks-1) << 2U]);
+                                DTHE_AES_writeDataBlock(ptrAesRegs, &ptrWordInputBuffer[(numBlocks-DTHE_AES_ONE) << 2U]);
 
                                 /* Wait for the AES IP to be ready with the output data */
                                 DTHE_AES_pollOutputReady(ptrAesRegs);
                                 /* Read the decrypted data into the decrypted block: */
-                                DTHE_AES_readDataBlock(ptrAesRegs, &ptrWordOutputBuffer[(numBlocks-1) << 2U]);
+                                DTHE_AES_readDataBlock(ptrAesRegs, &ptrWordOutputBuffer[(numBlocks-DTHE_AES_ONE) << 2U]);
 
                                 /*Update Iv to load tweak value*/
                                 if (numBlocks == 1U) {
@@ -918,13 +922,13 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                             memset(tempData, 0, sizeof(tempData));
 
                             /*Copy last "complete 16-byte block" output data to tempData buffer*/
-                            ptrByteBuf = (uint8_t*)&ptrWordOutputBuffer[(numBlocks-1)<<2U];
+                            ptrByteBuf = (uint8_t*)&ptrWordOutputBuffer[(numBlocks-DTHE_AES_ONE)<<2U];
                             memcpy(&tempData[0], ptrByteBuf, 16);
 
                             /*Update pointer to last valid byte of inPartialBlock and fill remaing data from last
                                 output data block at same index to make inPartialBlock 128 bit aligned*/
                             ptrByteBuf = (uint8_t*)&inPartialBlock[0];
-                            memcpy(&ptrByteBuf[partialDataSize], &tempData[partialDataSize], 16-partialDataSize);
+                            memcpy(&ptrByteBuf[partialDataSize], &tempData[partialDataSize], DTHE_AES_BLOCK_LENGTH-partialDataSize);
                         }
 
                         /* Wait for the AES IP to be ready to receive the data: */
@@ -948,11 +952,11 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                                         (void *)&outPartialBlock[0U],
                                         16U);
                             }
-                            else if((ptrParams->algoType == DTHE_AES_XTS_MODE) && (numBlocks != 0))
+                            else if((ptrParams->algoType == DTHE_AES_XTS_MODE) && (numBlocks != DTHE_AES_ZERO))
                             {
                                 /* XTS: Implement Cipher Text Stealing (CTS) [Step 2] for partial block*/
                                 /*Replace 2nd last block of output buffer with current AES output*/
-                                (void)memcpy ((void *)&ptrWordOutputBuffer[(index-1) << 2U],
+                                (void)memcpy ((void *)&ptrWordOutputBuffer[(index-1U) << 2U],
                                         (void *)&outPartialBlock[0U],
                                         16U);
 
