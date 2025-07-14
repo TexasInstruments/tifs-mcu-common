@@ -51,9 +51,9 @@
 /*                          Global variables                                  */
 /* ========================================================================== */
 /** Rng drbg default seed array */
-uint32_t gRngDrbgDefaultSeed[RNG_DRBG_SEED_MAX_ARRY_SIZE_IN_DWORD]={0x425F4941, 0x37CCE532, 0x2C07C03E, 0x14CAEA55,
-                               0x57DF93B5, 0xC277D946, 0xAE4728C1, 0x7FEBA982,
-                               0xB3E156DA, 0xE7993855, 0x45EE2421, 0x506F53D1 };
+uint32_t gRngDrbgDefaultSeed[RNG_DRBG_SEED_MAX_ARRY_SIZE_IN_DWORD]={0x425F4941U, 0x37CCE532U, 0x2C07C03EU, 0x14CAEA55U,
+                               0x57DF93B5U, 0xC277D946U, 0xAE4728C1U, 0x7FEBA982U,
+                               0xB3E156DAU, 0xE7993855U, 0x45EE2421U, 0x506F53D1U };
 /* ========================================================================== */
 /*                          Function Definitions                              */
 /* ========================================================================== */

@@ -33,7 +33,7 @@
  * Register addresses are derived
  * using this address
  */
-#define CRI_PKE_REGISTER_BASE_ADDRESS 0xCE010000
+#define CRI_PKE_REGISTER_BASE_ADDRESS 0xCE010000U
 
 /**
  * @brief Base Address of MAU SRAM
@@ -41,6 +41,6 @@
  * PKE RAM addresses are derived
  * using this address.
  */
-#define CRI_PKE_SRAM_BASE_ADDRESS 0xCE012000
+#define CRI_PKE_SRAM_BASE_ADDRESS 0xCE012000U
 
 #endif // PKE_BASEADDRESS_H_
