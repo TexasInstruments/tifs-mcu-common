@@ -128,13 +128,16 @@ void Crypto_PKCSPaddingForSign(const uint8_t *shaHash, uint32_t keyLengthInBytes
     switch(typeOfAlgo)
     {
         case 0:
-            shaLen = 20, psLen = keyLengthInBytes - 3 - shaLen;
+            shaLen = 20;
+            psLen = keyLengthInBytes - 3 - shaLen;
         break;
         case 1:
-            shaLen = 32, psLen = keyLengthInBytes - 3  - shaLen;
+            shaLen = 32; 
+            psLen = keyLengthInBytes - 3  - shaLen;
         break;
         case 2:
-            shaLen = 64, psLen = keyLengthInBytes - 3  - shaLen;
+            shaLen = 64; 
+            psLen = keyLengthInBytes - 3  - shaLen;
         break;
     }
     output[offset] = 0x00;
