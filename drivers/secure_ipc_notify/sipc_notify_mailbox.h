@@ -76,7 +76,7 @@ static inline int32_t SIPC_mailboxRead(SIPC_SwQueue *swQ, uint8_t *Buff)
     volatile uint32_t rdIdx = swQ->rdIdx;
     volatile uint32_t wrIdx = swQ->wrIdx;
 
-    if(rdIdx < swQ->Qlength && wrIdx < swQ->Qlength)
+    if((rdIdx < swQ->Qlength) && (wrIdx < swQ->Qlength))
     {
         /* If this condition meets then it means there is something in the fifo*/
         if( rdIdx != wrIdx)
@@ -110,7 +110,7 @@ static inline int32_t SIPC_mailboxWrite(uint32_t mailboxBaseAddr, uint32_t wrInt
     volatile uint32_t rdIdx = swQ->rdIdx;
     volatile uint32_t wrIdx = swQ->wrIdx;
 
-    if(rdIdx < swQ->Qlength && wrIdx < swQ->Qlength)
+    if((rdIdx < swQ->Qlength) && (wrIdx < swQ->Qlength))
     {
         if( ( (wrIdx+1)%swQ->Qlength ) != rdIdx )
         {
