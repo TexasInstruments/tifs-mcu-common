@@ -96,6 +96,10 @@ typedef struct
     /**< Aes Base address */
     uint32_t                shaBaseAddr;
     /**< sha Base address */
+    uint32_t                sm3BaseAddr;
+    /**< sm3 Base address if supported by the device*/
+    uint32_t                sm4BaseAddr;
+    /**< sm4 Base address if supported by the device*/
 	uint32_t                isOpen;
     /**< Flag to indicate whether the instance is opened already */
     uint32_t				faultStatus;
