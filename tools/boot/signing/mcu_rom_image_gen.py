@@ -205,12 +205,12 @@ def get_cert(args):
             bootCore_id = 16
             certType = 1
             bootCoreOptions = 0
-        elif((args.device == 'f29h85x') and (args.core == 'C29') and (args.fw_type != 'SEC_CFG') and (args.fw_type != 'CPU3')):
+        elif(((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.fw_type != 'SEC_CFG') and (args.fw_type != 'CPU3')):
             bootAddress = 0
             bootCore_id = 16
             certType = 1
             bootCoreOptions = 0
-        elif((args.device == 'f29h85x') and (args.core == 'C29') and (args.fw_type == 'SEC_CFG')):
+        elif(((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.fw_type == 'SEC_CFG')):
             bootAddress = 0
             bootCore_id = 16
             certType = 3
@@ -490,7 +490,7 @@ cert_file_name = "temp_cert"+str(randint(111, 999))
 with open(cert_file_name, "w+") as f:
     f.write(cert_str)
 
-if(args.device == 'f29h85x'):
+if((args.device == 'f29h85x') or (args.device == 'f29p32x')):
     cert_name = "C29-cert-pad_in.bin"
     cert_name_final = "C29-cert-pad.bin"
 else:
@@ -517,7 +517,7 @@ else:
     bin_fh = open(args.image_bin, 'rb')
 
 # BOOTROM expects certificate size to be 4 KB for HSM RAM/FLASH boot and C29 FLASH boot  
-if(((args.device == 'f29h85x') and (args.core == 'HSM')) or ((args.device == 'f29h85x') and (args.core == 'C29') and (args.boot == 'FLASH'))):
+if((((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'HSM')) or (((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.boot == 'FLASH'))):
     cert_size = os.path.getsize(cert_name)
     cert_data = cert_fh.read()
     temp_cert = cert_data + (b'\x00' * (4096 - cert_size))  # Pad certificate with 0 if size less than 4 KB
@@ -536,7 +536,7 @@ cert_fh_out.close()
 # Delete the temporary files
 os.remove(cert_file_name)
 os.remove(cert_name)
-if(args.device != 'f29h85x'):
+if((args.device != 'f29h85x') and (args.device != 'f29p32x')):
     os.remove(cert_name_final)
 
 if args.sbl_enc or args.tifs_enc:
