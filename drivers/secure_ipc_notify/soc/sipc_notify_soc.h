@@ -43,7 +43,7 @@ extern "C"
 #include <security_common/drivers/secure_ipc_notify/soc/am263x/sipc_notify_cfg.h>
 #elif defined (SOC_AM263PX)
 #include <security_common/drivers/secure_ipc_notify/soc/am263px/sipc_notify_cfg.h>
-#elif defined (SOC_F29H85X)
+#elif defined (SOC_F29H85X) || defined (SOC_F29P32X)
 #include <security_common/drivers/secure_ipc_notify/soc/f29h85x/sipc_notify_cfg.h>
 #elif defined (SOC_AM261X)
 #include <security_common/drivers/secure_ipc_notify/soc/am261x/sipc_notify_cfg.h>
