@@ -205,15 +205,26 @@ def get_cert(args):
             bootCore_id = 16
             certType = 1
             bootCoreOptions = 0
-        elif(((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.fw_type != 'SEC_CFG') and (args.fw_type != 'CPU3')):
+        elif(((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.fw_type != 'SEC_CFG_CPU1') 
+             and (args.fw_type != 'SEC_CFG_CPU2') and (args.fw_type != 'SEC_CFG_CPU3') and (args.fw_type != 'CPU3')):
             bootAddress = 0
             bootCore_id = 16
             certType = 1
             bootCoreOptions = 0
-        elif(((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.fw_type == 'SEC_CFG')):
+        elif(((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.fw_type == 'SEC_CFG_CPU1')):
             bootAddress = 0
             bootCore_id = 16
             certType = 3
+            bootCoreOptions = 0
+        elif(((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.fw_type == 'SEC_CFG_CPU2')):
+            bootAddress = 0
+            bootCore_id = 16
+            certType = 5
+            bootCoreOptions = 0
+        elif(((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.fw_type == 'SEC_CFG_CPU3')):
+            bootAddress = 0
+            bootCore_id = 16
+            certType = 6
             bootCoreOptions = 0
         elif((args.device == 'f29h85x') and (args.core == 'C29') and (args.fw_type == 'CPU3')):
             bootAddress = 0
@@ -516,11 +527,21 @@ if args.sbl_enc or args.tifs_enc:
 else:
     bin_fh = open(args.image_bin, 'rb')
 
-# BOOTROM expects certificate size to be 4 KB for HSM RAM/FLASH boot and C29 FLASH boot  
-if((((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'HSM')) or (((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.boot == 'FLASH'))):
+# BOOTROM expects certificate size to be 4 KB for HSM RAM/FLASH boot and C29 FLASH boot
+if((((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'HSM')) or 
+   (((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.boot == 'FLASH') and 
+    ((args.fw_type != 'SEC_CFG_CPU1') and (args.fw_type != 'SEC_CFG_CPU2') and (args.fw_type != 'SEC_CFG_CPU3')))):
     cert_size = os.path.getsize(cert_name)
     cert_data = cert_fh.read()
     temp_cert = cert_data + (b'\x00' * (4096 - cert_size))  # Pad certificate with 0 if size less than 4 KB
+    load_data = bin_fh.read()
+    final_fh.write(temp_cert + load_data)
+    cert_fh_out.write(temp_cert)
+elif(((args.device == 'f29h85x') or (args.device == 'f29p32x')) and (args.core == 'C29') and (args.boot == 'FLASH') and
+     (args.fw_type == 'SEC_CFG_CPU1') or (args.fw_type == 'SEC_CFG_CPU2') or (args.fw_type == 'SEC_CFG_CPU3')):
+    cert_size = os.path.getsize(cert_name)
+    cert_data = cert_fh.read()
+    temp_cert = cert_data + (b'\x00' * (2048 - cert_size))  # Pad certificate with 0 if size less than 2 KB
     load_data = bin_fh.read()
     final_fh.write(temp_cert + load_data)
     cert_fh_out.write(temp_cert)
