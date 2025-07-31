@@ -222,6 +222,10 @@ cert_data_inner = cert_fh_inner.read()
 temp_cert = cert_data_outer + cert_data_inner
 final_fh.write(temp_cert)
 
+cert_fh_inner.close()
+cert_fh_outer.close()
+final_fh.close()
+
 # Delete the temporary files
 os.remove(cert_file_name_outer)
 os.remove(cert_file_name_inner)
