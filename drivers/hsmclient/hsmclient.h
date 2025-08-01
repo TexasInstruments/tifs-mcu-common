@@ -265,10 +265,10 @@ extern "C"
     /**
      * @brief
      * This is RNG type which holds the resultPtr for derivation which is returned by TIFS.
-     * This also holds the resultLengthPtr and DRBG Mode along with seedValue and seedSize.
+     * This also holds the resultLength and DRBG Mode along with seedValue and seedSize.
      *
      * @param resultPtr		    Pointer to the random number generated
-     * @param resultLengthPtr	Pointer to store the desired length in bytes
+     * @param resultLength	    Length in bytes
      * @param DRBGMode          Flag that determines whether DRBG mode is required or not
      * @param seedValue			Stores the seed values
      * @param seedSizeInDWords   Stores the seed size in double words
@@ -276,7 +276,7 @@ extern "C"
     typedef struct RNGReq_t_
     {
         uint8_t *resultPtr;        /**< Pointer to the random number.*/
-        uint32_t *resultLengthPtr; /**< Pointer to determine result length.*/
+        uint32_t resultLength;    /**< Length in bytes.*/
         uint8_t DRBGMode;          /**< Flag to enable DRBG Mode.*/
         uint32_t *seedValue;       /**< Seed Value.*/
         uint8_t seedSizeInDWords;  /**< Seed Size in double words.*/

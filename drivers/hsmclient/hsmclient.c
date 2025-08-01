@@ -1741,7 +1741,6 @@ int32_t HsmClient_getRandomNum(HsmClient_t *HsmClient,
     HsmClient->ReqMsg.args = (void *)(uintptr_t)SOC_virtToPhy(getRandomNum);
 
     getRandomNum->resultPtr = (uint8_t *)(uintptr_t)SOC_virtToPhy(getRandomNum->resultPtr);
-    getRandomNum->resultLengthPtr = (uint32_t *)(uintptr_t)SOC_virtToPhy(getRandomNum->resultLengthPtr);
     getRandomNum->seedValue = (uint32_t *)(uintptr_t)SOC_virtToPhy(getRandomNum->seedValue);
 
     /* Add arg crc */
@@ -1753,7 +1752,6 @@ int32_t HsmClient_getRandomNum(HsmClient_t *HsmClient,
     */
     CacheP_wbInv(getRandomNum, GET_CACHE_ALIGNED_SIZE(sizeof(RNGReq_t)), CacheP_TYPE_ALL);
     CacheP_wbInv(getRandomNum->seedValue, GET_CACHE_ALIGNED_SIZE((getRandomNum->seedSizeInDWords) * 4), CacheP_TYPE_ALL);
-    CacheP_wbInv(getRandomNum->resultLengthPtr, GET_CACHE_ALIGNED_SIZE(sizeof(uint32_t)), CacheP_TYPE_ALL);
 
     status = HsmClient_SendAndRecv(HsmClient, timeout);
     if (status == SystemP_SUCCESS)
@@ -1775,10 +1773,8 @@ int32_t HsmClient_getRandomNum(HsmClient_t *HsmClient,
             crcArgs = crc16_ccit((uint8_t *)HsmClient->RespMsg.args, sizeof(RNGReq_t));
 
             ((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr = (uint8_t *)SOC_phyToVirt((uint64_t)(((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr));
-            ((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr = (uint32_t *)SOC_phyToVirt((uint64_t)(((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr));
             ((RNGReq_t *)HsmClient->RespMsg.args)->seedValue = (uint32_t *)SOC_phyToVirt((uint64_t)(((RNGReq_t *)HsmClient->RespMsg.args)->seedValue));
             CacheP_inv((void *)((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr, GET_CACHE_ALIGNED_SIZE(((uint32_t)*(((RNGReq_t *)HsmClient->RespMsg.args)->resultPtr))), CacheP_TYPE_ALL);
-            CacheP_inv((void *)((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr, GET_CACHE_ALIGNED_SIZE(((uint32_t)*(((RNGReq_t *)HsmClient->RespMsg.args)->resultLengthPtr))), CacheP_TYPE_ALL);
             CacheP_inv((void *)((RNGReq_t *)HsmClient->RespMsg.args)->seedValue, GET_CACHE_ALIGNED_SIZE(((uint32_t)*(((RNGReq_t *)HsmClient->RespMsg.args)->seedValue))), CacheP_TYPE_ALL);
 
             if (crcArgs == HsmClient->RespMsg.crcArgs)
