@@ -246,6 +246,10 @@ static void DTHE_AES_controlMode(CSL_AesRegs *ptrAesRegs, uint32_t algoType)
         CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_F9, CSL_AES_S_CTRL_F9_RESETVAL);
         CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CBCMAC, CSL_AES_S_CTRL_CBCMAC_RESETVAL);
     }
+    else
+    {
+        /* Do Nothing, added to avoid MISRA.IF.NO_ELSE.*/
+    }
 }
 
 static void DTHE_AES_CTRWidth(CSL_AesRegs *ptrAesRegs, uint32_t ctrWidth)
@@ -267,6 +271,10 @@ static void DTHE_AES_CTRWidth(CSL_AesRegs *ptrAesRegs, uint32_t ctrWidth)
     else if(ctrWidth == DTHE_AES_CTR_WIDTH_128)
     {
         ctrWidthRegValue = CSL_AES_S_CTRL_CTR_WIDTH_COUNTER128;
+    }
+    else
+    {
+        /* Do Nothing, added to avoid MISRA.IF.NO_ELSE.*/
     }
 
     CSL_REG32_FINS(&ptrAesRegs->CTRL, AES_S_CTRL_CTR_WIDTH, ctrWidthRegValue);
@@ -612,6 +620,10 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     /* Tag Length */
                     DTHE_AES_setCCM_M(ptrAesRegs, ptrParams->ccmM);
                     DTHE_AES_CTRWidth(ptrAesRegs, DTHE_AES_CTR_WIDTH_32);
+                }
+                else
+                {
+                    status = DTHE_AES_RETURN_FAILURE;
                 }
                 /*
                 - DataLength is sent by user, then set the same here.
@@ -1002,6 +1014,10 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                 else if(ptrParams->streamState == DTHE_AES_STREAM_FINISH)
                 {
                     gStreamState = AES_STATE_NEW;
+                }
+                else
+                {
+                    status = DTHE_AES_RETURN_FAILURE;
                 }
             }
         }

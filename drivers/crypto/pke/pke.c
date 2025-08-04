@@ -677,6 +677,11 @@ AsymCrypt_Return_t AsymCrypt_EddsaSign(AsymCrypt_Handle handle,
         key_len = EDDSA_ED448_KEY_LEN;
         curve = cri_pke_get_curve(CRI_ECC_CURVE_ED448);
     }
+    else 
+    {   
+        hash_len = 0U;
+        key_len  = 0U;
+    }
 
     if ((curve == NULL) || (handle == NULL) || (shaCbFxn == NULL)|| (ptrData == NULL)|| (key == NULL) || (sig == NULL)) {
         status  = ASYM_CRYPT_RETURN_FAILURE;
@@ -782,6 +787,8 @@ AsymCrypt_Return_t AsymCrypt_EddsaVerify(AsymCrypt_Handle handle,
         key_len = EDDSA_ED448_KEY_LEN;
         curve = cri_pke_get_curve(CRI_ECC_CURVE_ED448);
         curvelen = cri_pke_get_curve_length(curve);
+    }else {
+        /* Do Nothing, added to avoid MISRA.IF.NO_ELSE.*/
     }
 
     if ((curve == NULL) || (handle == NULL) || (shaCbFxn == NULL)|| (ptrData == NULL) || (sig == NULL)) {
@@ -845,6 +852,8 @@ AsymCrypt_Return_t AsymCrypt_EddsaGetPubKey(AsymCrypt_Handle handle,
     } else if (ASYM_CRYPT_CURVE_TYPE_EDDSA_448 == input_curve) {
         key_len = EDDSA_ED448_HASH_LEN;
         curve = cri_pke_get_curve(CRI_ECC_CURVE_ED448);
+    }else {
+        /* Do Nothing, added to avoid MISRA.IF.NO_ELSE.*/
     }
 
     if ((curve == NULL) || (shaCbFxn == NULL) || (privKey == NULL) || (pubKey == NULL)) {
