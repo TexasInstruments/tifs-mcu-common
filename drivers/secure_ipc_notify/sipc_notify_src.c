@@ -486,7 +486,7 @@ int32_t SIPC_init(SIPC_Params *params)
             /* Isr need to write this register to clear the interrupt */
             SIPC_getReadMailbox(&mailboxBaseAddr);
 
-            if(pInterruptConfig->clearIntOnInit)
+            if (pInterruptConfig->clearIntOnInit != 0U)
             {
                 SIPC_mailboxClearAllInt(mailboxBaseAddr);
             }

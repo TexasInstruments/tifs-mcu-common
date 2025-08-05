@@ -117,7 +117,7 @@ int cri_pke_get_pseudo_random(void *buf, size_t len, int32_t slot, uint32_t slot
 	ISSUE_MAU_COMMAND(COPY, R_MAU_ADDR_RNG, length);
 
 	ret = cri_pke_wait();
-	if (ret) { goto err; }
+	if ((ret != 0)) { goto err; }
 
 	if (buf != NULL) {
 		if (slot == CRI_PKE_NO_SLOT) {
