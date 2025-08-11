@@ -61,8 +61,13 @@
 /** XTS Last Block Status : FALSE */
 #define     AES_XTS_LAST_BLOCK_FALSE    (0x00U)
 
+/**  AES max block length */
 #define     DTHE_AES_BLOCK_LENGTH       16U
+
+/**  AES zero data length */
 #define     DTHE_AES_ZERO               0U
+
+/**  AES one data length */
 #define     DTHE_AES_ONE                1U
 
 /* ========================================================================== */
