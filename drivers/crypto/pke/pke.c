@@ -376,7 +376,6 @@ AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
     uint32_t bigEndianHash[ECDSA_MAX_LENGTH];
     uint8_t littleEndianHash[ECDSA_MAX_LENGTH*4U];
     uint32_t size = cp->prime[0U];
-    uint32_t curvelen = 0U;
     uint32_t nonce[ECDSA_MAX_LENGTH*2U];
     uint32_t* noncePtr = NULL;
 
@@ -385,8 +384,7 @@ AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
            (size != cp->order[0U]) || (size < cp->a[0U]) ||
            (size < cp->b[0U]) || (size < cp->g.x[0U]) ||
            (size < cp->g.y[0U]) || (size < priv[0U]) ||
-           (size < h[0U]) || (size < k[0U]))) &&
-           (PKE_bigIntBitLen(cp->order) >= PKE_bigIntBitLen(h)))
+           (size < k[0U]))))
     {
         /* Checking handle is opened or not */
         if(ASYM_CRYPT_NULL_HANDLE != handle)
@@ -430,19 +428,8 @@ AsymCrypt_Return_t AsymCrypt_ECDSASign(AsymCrypt_Handle handle,
             /* Get curve id based on the cri_ecc_curve_t param set */
             curve = cri_pke_get_curve(curveType);
 
-            if (curve->curve == NIST_SECP521r1)
-            {
-                /* Incase of Sec521, the hashlen > curvelen and that should be input to the PKE function */
-                curvelen = size*4U;
-            }
-            else
-            {
-                /* Get curve length */
-                curvelen = cri_pke_get_curve_length(curve);
-            }
-
             /* Get signature */
-            pkeStatus = cri_pke_ecdsa_sign_extended(gPKE, curve, &priv[1U], NULL, noncePtr, &littleEndianHash[0U], curvelen, &sig->r[1U], &sig->s[1U]);
+            pkeStatus = cri_pke_ecdsa_sign_extended(gPKE, curve, &priv[1U], NULL, noncePtr, &littleEndianHash[0U], size*4U, &sig->r[1U], &sig->s[1U]);
 
             sig->r[0U] = cp->prime[0U];
             sig->s[0U] = cp->prime[0U];
@@ -477,7 +464,6 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
     uint32_t bigEndianHash[ECDSA_MAX_LENGTH];
     uint8_t littleEndianHash[ECDSA_MAX_LENGTH*4U];
     uint32_t size = cp->prime[0U];
-    uint32_t curvelen = 0;
 
     /* check sizes */
     if ((!((size <= 2U) || (size > (ECDSA_MAX_LENGTH - 1U)) ||
@@ -485,8 +471,7 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
            (size < cp->b[0U]) || (size < cp->g.x[0U]) ||
            (size < cp->g.y[0U]) || (size < pub->x[0U]) ||
            (size < pub->y[0U]) || (size < sig->r[0U]) ||
-           (size < sig->s[0U]) || (size < h[0U]))) &&
-            (PKE_bigIntBitLen(cp->order) >= PKE_bigIntBitLen(h)) &&
+           (size < sig->s[0U]))) &&
             (PKE_isBigIntZero(sig->r) != ASYM_CRYPT_RETURN_SUCCESS) &&
             (PKE_isBigIntZero(sig->s) != ASYM_CRYPT_RETURN_SUCCESS))
     {
@@ -515,19 +500,8 @@ AsymCrypt_Return_t AsymCrypt_ECDSAVerify(AsymCrypt_Handle handle,
             /* Get curve id based on the cri_ecc_curve_t param set */
             curve = cri_pke_get_curve(curveType);
 
-            if (curve->curve == NIST_SECP521r1)
-            {
-                /* Incase of Sec521, the hashlen > curvelen and that should be input to the PKE function */
-                curvelen = size*4U;
-            }
-            else
-            {
-                /* Get curve length */
-                curvelen = cri_pke_get_curve_length(curve);
-            }
-
             /* Call the ECDSA Verify function */
-            pkeStatus = cri_pke_ecdsa_verify_hash(gPKE, curve, &pub->x[1U], &pub->y[1U], &littleEndianHash[0U], curvelen, &sig->r[1U], &sig->s[1U], &signatureRPrime);
+            pkeStatus = cri_pke_ecdsa_verify_hash(gPKE, curve, &pub->x[1U], &pub->y[1U], &littleEndianHash[0U], size*4U, &sig->r[1U], &sig->s[1U], &signatureRPrime);
 
             /* Revert the input back to original state */
             Crypto_Uint32ToBigInt((uint32_t *)&bigEndianHash[0U], size, (uint32_t *)&h[0U]);
