@@ -316,7 +316,7 @@ DTHE_SHA_Return_t DTHE_SHA_compute(DTHE_Handle handle, DTHE_SHA_Params* ptrShaPa
         /* Compute the number of partial words which need to be handled seperately */
         numPartialWords = dataLenWords % blockSize;
 
-        if ((config->dmaEnable == DMA_ENABLE) && numBlocks > 0U)
+        if ((config->dmaEnable == DMA_ENABLE) && (numBlocks > 0U))
         {
             dmaHandle = DMA_open(0);
 
@@ -518,7 +518,7 @@ DTHE_SHA_Return_t DTHE_HMACSHA_compute(DTHE_Handle handle, DTHE_SHA_Params* ptrS
             /* Compute the number of partial words which need to be handled seperately */
             numPartialWords = dataLenWords % blockSize;
 
-            if ((config->dmaEnable == DMA_ENABLE) && numBlocks > 0U)
+            if ((config->dmaEnable == DMA_ENABLE) && (numBlocks > 0U))
             {
                 dmaHandle = DMA_open(0);
 
