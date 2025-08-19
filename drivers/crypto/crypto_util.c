@@ -129,17 +129,19 @@ void Crypto_PKCSPaddingForSign(const uint8_t *shaHash, uint32_t keyLengthInBytes
     {
         case 0:
             shaLen = 20;
-            psLen = keyLengthInBytes - 3U - shaLen;
         break;
         case 1:
             shaLen = 32; 
-            psLen = keyLengthInBytes - 3U  - shaLen;
         break;
         case 2:
             shaLen = 64; 
-            psLen = keyLengthInBytes - 3U  - shaLen;
+        break;
+        default:
         break;
     }
+
+    psLen = keyLengthInBytes - 3U - shaLen;
+
     output[offset] = 0x00;
     offset++;
     output[offset] = 0x01;
@@ -149,33 +151,19 @@ void Crypto_PKCSPaddingForSign(const uint8_t *shaHash, uint32_t keyLengthInBytes
     {
         output[offset+i] = 0xFF;
     }
-    offset = offset + psLen;
-    output[offset]= 0x00;
-    offset++;
 
-    switch(typeOfAlgo)
+    if (shaLen != 0U)
     {
-        case 0:
-            for(i = 0; i<shaLen; i++)
-            {
-                output[offset + i] = shaHash[i];
-            }
-            offset = offset + shaLen;
-        break;
-        case 1:
-            for(i = 0; i<shaLen; i++)
-            {
-                output[offset + i] = shaHash[i];
-            }
-            offset = offset + shaLen;
-        break;
-        case 2:
-            for(i = 0; i<shaLen; i++)
-            {
-                output[offset + i] = shaHash[i];
-            }
-            offset = offset + shaLen;
-        break;
+        offset = offset + psLen;
+        output[offset]= 0x00;
+        offset++;
+
+        for(i = 0; i < shaLen; i++)
+        {
+            output[offset + i] = shaHash[i];
+        }
+        offset += shaLen;
+
     }
 
     return;

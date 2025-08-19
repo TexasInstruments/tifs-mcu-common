@@ -45,12 +45,6 @@
 #include <security_common/drivers/crypto/dthe/dma.h>
 
 /* ========================================================================== */
-/*                     Static Function Declarations                           */
-/* ========================================================================== */
-static void DTHE_AES_CTRWidth(CSL_AesRegs *ptrAesRegs, uint32_t ctrWidth);
-static void DTHE_AES_updateXTSIv(CSL_AesRegs *ptrAesRegs, const DTHE_AES_Params* ptrParams, uint32_t *newIv, Bool isFirstBlock);
-
-/* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
 /** This is the max value of datasize taken in case of streaming mode */
@@ -86,7 +80,8 @@ static uint8_t gStreamState = AES_STATE_NEW;
 /* ========================================================================== */
 /*                 Internal Function Declarations                             */
 /* ========================================================================== */
-
+static void DTHE_AES_CTRWidth(CSL_AesRegs *ptrAesRegs, uint32_t ctrWidth);
+static void DTHE_AES_updateXTSIv(CSL_AesRegs *ptrAesRegs, const DTHE_AES_Params* ptrParams, uint32_t *newIv, Bool isFirstBlock);
 static void DTHE_AES_setDMAContextStatus(CSL_AesRegs *ptrAesRegs, uint8_t dmaStatus);
 static void DTHE_AES_setDMAOutputRequestStatus(CSL_AesRegs *ptrAesRegs, uint8_t dmaStatus);
 static void DTHE_AES_setDMAInputRequestStatus(CSL_AesRegs *ptrAesRegs, uint8_t dmaStatus);
