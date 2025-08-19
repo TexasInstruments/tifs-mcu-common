@@ -43,6 +43,13 @@
 #include <string.h>
 #include <security_common/drivers/crypto/dthe/dthe_aes.h>
 #include <security_common/drivers/crypto/dthe/dma.h>
+
+/* ========================================================================== */
+/*                     Static Function Declarations                           */
+/* ========================================================================== */
+static void DTHE_AES_CTRWidth(CSL_AesRegs *ptrAesRegs, uint32_t ctrWidth);
+static void DTHE_AES_updateXTSIv(CSL_AesRegs *ptrAesRegs, const DTHE_AES_Params* ptrParams, uint32_t *newIv, Bool isFirstBlock);
+
 /* ========================================================================== */
 /*                           Macros & Typedefs                                */
 /* ========================================================================== */
