@@ -68,6 +68,7 @@ typedef struct SIPC_SwQueue_
     uint8_t *Qfifo; /**Pointer to the FIFO queue in HSM MBOX memory */
 } SIPC_SwQueue;
 
+#if defined(__aarch64__) || defined(__arm__)
 static inline void asm_dsb_memory(void)
 {
     __asm__ __volatile__( "dsb sy" "\n\t": : : "memory");
@@ -77,6 +78,7 @@ static inline void asm_isb_memory(void)
 {
     __asm__ __volatile__( "isb" "\n\t": : : "memory");
 }
+#endif
 
 /* Read from SW fifo within a mailbox  */
 static inline int32_t SIPC_mailboxRead(SIPC_SwQueue *swQ, uint8_t *Buff)
