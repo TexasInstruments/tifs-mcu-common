@@ -374,7 +374,16 @@ void HsmClient_isr(uint8_t remoteCoreId, uint8_t localClientId,
     {
         if (gSecureBootStatus == SystemP_SUCCESS)
         {
-            gNum_HsmResponseReceived++;
+            /* gNum_HsmResponseReceived must only be incremented if 
+             * the call is non-blocking which is valid only for PROC_AUTH
+             * (START, UPDATE, FINISH).
+             */
+            if ((HsmClient->RespMsg.serType == HSM_MSG_PROC_AUTH_BOOT_START)  ||  
+                (HsmClient->RespMsg.serType == HSM_MSG_PROC_AUTH_BOOT_UPDATE) ||  
+                (HsmClient->RespMsg.serType == HSM_MSG_PROC_AUTH_BOOT_FINISH))    
+            {
+                gNum_HsmResponseReceived++;
+            }
             if (HsmClient->RespMsg.flags == HSM_FLAG_NACK)
             {
                 gSecureBootStatus = SystemP_FAILURE;
