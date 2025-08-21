@@ -623,7 +623,8 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                 }
                 else
                 {
-                    status = DTHE_AES_RETURN_FAILURE;
+                     /* Do Nothing, added to avoid MISRA.IF.NO_ELSE.*/
+                     /* This path of else is taken for algoType != (CCM, GCM, CBC-MAC, CTR, CFB, XTS, CMAC)*/
                 }
                 /*
                 - DataLength is sent by user, then set the same here.
@@ -1017,7 +1018,8 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                 }
                 else
                 {
-                    status = DTHE_AES_RETURN_FAILURE;
+                    /* Do Nothing, added to avoid MISRA.IF.NO_ELSE.*/
+                     /* This path of else is taken for streamState = INIT and UPDATE */
                 }
             }
         }
