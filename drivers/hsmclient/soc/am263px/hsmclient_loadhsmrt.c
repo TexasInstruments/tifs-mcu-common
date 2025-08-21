@@ -369,8 +369,12 @@ int32_t Hsmclient_loadHSMRtFirmware(HsmClient_t *NotifyClient, const uint8_t *pH
         /* Wait until hsmRt firmware download completes */
         while (gHsmRtDownloadComplete != 1)
         {
-            ; /* wait until hsmRt download completes */
+            
         }
+
+        /* Reset the variable status to 0 */
+        gHsmRtDownloadComplete = 0;
+
         orgChecksum = loadHSMResult.header.checksum;
         loadHSMResult.header.checksum = 0U;
         /* Compute the checksum: */
