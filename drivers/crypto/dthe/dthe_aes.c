@@ -488,22 +488,35 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
             }
 
             /* Sanity Check: Key Validation */
-            if (status == DTHE_AES_RETURN_SUCCESS)
+            if (DTHE_AES_RETURN_SUCCESS == status)
             {
                 /* KEK Mode or Normal Key Mode: */
-                if (ptrParams->useKEKMode == TRUE)
+                if (TRUE == ptrParams->useKEKMode)
                 {
-                    /* If KEKMode is set, configure Muxes for KEK
-                    * to be passed to AES Engine */
+                    /* KEK Mode: Key should not be specified */
+                    if (NULL != ptrParams->ptrKey)
+                    {
+                        status = DTHE_AES_RETURN_FAILURE;
+                    }
+                    else
+                    {
+                    /* If KEKMode is set, configure Muxes for KEK to be passed to AES Engine */
                     /* KEK Mode: Enable Direct Bus */
                     CSL_REG32_FINS(&ptrAesRegs->SYSCONFIG,AES_S_SYSCONFIG_DIRECTBUSEN,1U);
+                    }
                 }
                 else
                 {
                     /* Normal Mode: Key should always be specified */
-                    if (ptrParams->ptrKey == NULL)
+                    if (NULL == ptrParams->ptrKey)
                     {
                         status = DTHE_AES_RETURN_FAILURE;
+                    }
+                    else
+                    {
+                    /* If KEYMode is set, configure Muxes for KEY to be passed to AES Engine */
+                    /* KEY Mode: Disable Direct Bus */
+                        CSL_REG32_FINS(&ptrAesRegs->SYSCONFIG,AES_S_SYSCONFIG_DIRECTBUSEN,0U);
                     }
                 }
 
@@ -515,38 +528,34 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     ||(ptrParams->algoType == DTHE_AES_CCM_MODE)\
                     ||(ptrParams->algoType == DTHE_AES_XTS_MODE))
                 {
-                    if (ptrParams->ptrIV == NULL)
+                    if (NULL == ptrParams->ptrIV )
                     {
                         status = DTHE_AES_RETURN_FAILURE;
                     }
                 }
 
-                /* Select the key input: */
-                if (ptrParams->useKEKMode == FALSE)
+                if (DTHE_AES_RETURN_SUCCESS == status)
                 {
-                    /* Normal Key Mode: */
-                    CSL_REG32_FINS(&ptrAesRegs->SYSCONFIG,AES_S_SYSCONFIG_DIRECTBUSEN,0U);
-
                     /* Clear KEY2 (KEY2_PART1) and KEY3 (KEY2_PART2) registers*/
                     DTHE_AES_clearKey2Part1(ptrAesRegs);
                     DTHE_AES_clearKey2Part2(ptrAesRegs);
-
+                    
                     /* Normal Mode: Key should always be specified */
                     if (ptrParams->ptrKey != NULL)
                     {
                         /* Configure the key which is to be used: */
                         DTHE_AES_set256BitKey1 (ptrAesRegs, ptrParams->ptrKey);
                     }
-
+                    
                     if (ptrParams->algoType == DTHE_AES_CMAC_MODE)
                     {
                         DTHE_AES_set128BitKey2Part1(ptrAesRegs, ptrParams->ptrKey1);
                         DTHE_AES_set128BitKey2Part2(ptrAesRegs, ptrParams->ptrKey2);
                     }
-
+                    
                     if (((ptrParams->algoType == DTHE_AES_GCM_MODE)|| (ptrParams->algoType == DTHE_AES_GHASH_ONLY_MODE))&& \
-                      ((ptrParams->modeSelect == DTHE_AES_GCM_MODE_1)|| \
-                       (ptrParams->modeSelect == DTHE_AES_GCM_MODE_2))) {
+                        ((ptrParams->modeSelect == DTHE_AES_GCM_MODE_1)|| \
+                        (ptrParams->modeSelect == DTHE_AES_GCM_MODE_2))) {
                         DTHE_AES_set128BitKey2Part1(ptrAesRegs, ptrParams->ptrKey1);
                     }
                     
@@ -554,7 +563,7 @@ DTHE_AES_Return_t DTHE_AES_execute(DTHE_Handle handle, const DTHE_AES_Params* pt
                     if (ptrParams->algoType == DTHE_AES_XTS_MODE) {
                         /* Only valid for XTS Mode : 2, 3 */
                         if ((ptrParams->modeSelect == DTHE_AES_XTS_MODE_2) \
-                           ||(ptrParams->modeSelect == DTHE_AES_XTS_MODE_3)) {
+                        ||(ptrParams->modeSelect == DTHE_AES_XTS_MODE_3)) {
                             DTHE_AES_set128BitKey2Part1(ptrAesRegs, ptrParams->ptrKey1);
                             /* Only program, if the ptr is valid. */
                             if (ptrParams->ptrKey2 != NULL) {
