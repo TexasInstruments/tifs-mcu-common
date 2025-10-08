@@ -61,8 +61,8 @@ extern "C" {
  */
 typedef struct SIPC_SwQueue_
 {
-    uint32_t rdIdx; /**<queue element will be read from this index.*/
-    uint32_t wrIdx; /**<queue element will be written to this index.*/
+    volatile uint32_t rdIdx; /**<queue element will be read from this index.*/
+    volatile uint32_t wrIdx; /**<queue element will be written to this index.*/
     uint16_t EleSize ; /**<Element size in words this will be a fixed parameter */
     uint16_t Qlength ; /**<total number of elements */
     uint8_t *Qfifo; /**Pointer to the FIFO queue in HSM MBOX memory */
@@ -85,8 +85,8 @@ static inline int32_t SIPC_mailboxRead(SIPC_SwQueue *swQ, uint8_t *Buff)
 {
     int32_t status = SystemP_FAILURE;
 
-    volatile uint32_t rdIdx = swQ->rdIdx;
-    volatile uint32_t wrIdx = swQ->wrIdx;
+    uint32_t rdIdx = swQ->rdIdx;
+    uint32_t wrIdx = swQ->wrIdx;
 
     if((rdIdx < swQ->Qlength) && (wrIdx < swQ->Qlength))
     {
@@ -102,6 +102,10 @@ static inline int32_t SIPC_mailboxRead(SIPC_SwQueue *swQ, uint8_t *Buff)
 
             rdIdx = swQ->rdIdx; /* read back to ensure the update has reached the memory */
 
+            if (rdIdx < swQ->rdIdx) /*To suppress MISRA warning*/
+            {
+                /*Do nothing*/
+            }
             #if defined(__aarch64__) || defined(__arm__)
             asm_dsb_memory();
             asm_isb_memory();
