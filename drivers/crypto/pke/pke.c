@@ -1142,13 +1142,14 @@ AsymCrypt_Return_t AsymCrypt_SM2DSAKeyGenPublic(AsymCrypt_Handle handle,
 static uint32_t PKE_countLeadingZeros(uint32_t x)
 {
     uint32_t bit_count = 0, lz = 0;
+    uint32_t temp_x = x;  // Create a local copy of x
 
-    bit_count = sizeof(x)*8;
+    bit_count = sizeof(temp_x)*8;
 
     /* Left shift until Most significant bit doesn become 1 */
 
-    while ((x & (1 << (bit_count - 1))) == 0) {
-        x <<= 1;
+    while ((temp_x & (1 << (bit_count - 1))) == 0) {
+        temp_x <<= 1;
         lz++;
     }
 
