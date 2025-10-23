@@ -1148,7 +1148,7 @@ static uint32_t PKE_countLeadingZeros(uint32_t x)
 
     /* Left shift until Most significant bit doesn become 1 */
 
-    while ((temp_x & (1 << (bit_count - 1))) == 0) {
+    while ((temp_x & (1 << (bit_count - (uint32_t)1))) == 0) {
         temp_x <<= 1;
         lz++;
     }
